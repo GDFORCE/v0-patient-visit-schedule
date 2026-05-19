@@ -20,6 +20,12 @@ import { VisitDetailScreen } from "@/components/clinical/screens/visit-detail-sc
 import { NotificationScreen } from "@/components/clinical/screens/notification-screen"
 import { CalendarMonthScreen } from "@/components/clinical/screens/calendar-month-screen"
 import { CalendarDayScreen } from "@/components/clinical/screens/calendar-day-screen"
+// Patient-specific screens
+import { MyVisitsScreen } from "@/components/clinical/screens/patient/my-visits-screen"
+import { ProfileSettingsScreen } from "@/components/clinical/screens/patient/profile-settings-screen"
+import { ChatScreen } from "@/components/clinical/screens/patient/chat-screen"
+import { MedicationReminderScreen } from "@/components/clinical/screens/patient/medication-reminder-screen"
+import { AboutTrialScreen } from "@/components/clinical/screens/patient/about-trial-screen"
 import { cn } from "@/lib/utils"
 
 type Screen =
@@ -41,6 +47,12 @@ type Screen =
   | "notifications"
   | "calendar"
   | "calendar-day"
+  // Patient modules
+  | "my-visits"
+  | "profile-settings"
+  | "chat"
+  | "medication-reminder"
+  | "about-trial"
 
 const screenCategories = [
   {
@@ -79,6 +91,16 @@ const screenCategories = [
       { id: "notifications", label: "Notifications" },
       { id: "calendar", label: "Calendar Month" },
       { id: "calendar-day", label: "Calendar Day" },
+    ],
+  },
+  {
+    name: "Patient Modules",
+    screens: [
+      { id: "my-visits", label: "My Visits" },
+      { id: "medication-reminder", label: "Medication Reminder" },
+      { id: "chat", label: "Chat" },
+      { id: "about-trial", label: "About Trial" },
+      { id: "profile-settings", label: "Profile & Settings" },
     ],
   },
 ]
@@ -226,6 +248,39 @@ export default function PatientVisitScheduleApp() {
             onBack={goBack}
           />
         )
+      // Patient-specific screens
+      case "my-visits":
+        return (
+          <MyVisitsScreen
+            onBack={goBack}
+            onVisitClick={() => navigate("visit-detail")}
+          />
+        )
+      case "profile-settings":
+        return (
+          <ProfileSettingsScreen
+            onBack={goBack}
+            onLogout={() => navigate("welcome")}
+          />
+        )
+      case "chat":
+        return (
+          <ChatScreen
+            onBack={goBack}
+          />
+        )
+      case "medication-reminder":
+        return (
+          <MedicationReminderScreen
+            onBack={goBack}
+          />
+        )
+      case "about-trial":
+        return (
+          <AboutTrialScreen
+            onBack={goBack}
+          />
+        )
       default:
         return null
     }
@@ -242,7 +297,7 @@ export default function PatientVisitScheduleApp() {
 
         <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
           {/* Screen Navigator */}
-          <div className="w-full lg:w-72 bg-white rounded-2xl shadow-lg p-4 order-2 lg:order-1">
+          <div className="w-full lg:w-72 bg-white rounded-2xl shadow-lg p-4 order-2 lg:order-1 max-h-[80vh] overflow-y-auto">
             <h2 className="font-semibold text-gray-900 mb-4">Navigate Screens</h2>
             {screenCategories.map((category) => (
               <div key={category.name} className="mb-4">
@@ -291,7 +346,7 @@ export default function PatientVisitScheduleApp() {
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-blue-50 text-[#1A3872] hover:bg-blue-100"
               >
-                🏢 Login as Sponsor
+                Login as Sponsor
               </button>
               <button
                 onClick={() => {
@@ -300,7 +355,7 @@ export default function PatientVisitScheduleApp() {
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-teal-50 text-[#0D9488] hover:bg-teal-100"
               >
-                🔬 Login as Investigator
+                Login as Investigator
               </button>
               <button
                 onClick={() => {
@@ -309,20 +364,54 @@ export default function PatientVisitScheduleApp() {
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-purple-50 text-purple-700 hover:bg-purple-100"
               >
-                👤 Login as Patient
+                Login as Patient
+              </button>
+              <div className="h-px bg-gray-200 my-3" />
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Patient Features
+              </p>
+              <button
+                onClick={() => navigate("my-visits")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+              >
+                My Visits
+              </button>
+              <button
+                onClick={() => navigate("medication-reminder")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-pink-50 text-pink-700 hover:bg-pink-100"
+              >
+                Medication Reminder
+              </button>
+              <button
+                onClick={() => navigate("chat")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+              >
+                Chat Interface
+              </button>
+              <button
+                onClick={() => navigate("about-trial")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-700 hover:bg-amber-100"
+              >
+                About Trial
+              </button>
+              <button
+                onClick={() => navigate("profile-settings")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-700 hover:bg-gray-100"
+              >
+                Profile & Settings
               </button>
               <div className="h-px bg-gray-200 my-3" />
               <button
                 onClick={() => navigate("add-trial")}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-amber-50 text-[#D97706] hover:bg-amber-100"
               >
-                ➕ Add New Trial
+                Add New Trial
               </button>
               <button
                 onClick={() => navigate("add-patient")}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-green-50 text-green-700 hover:bg-green-100"
               >
-                ➕ Add New Patient
+                Add New Patient
               </button>
             </div>
 
