@@ -147,10 +147,23 @@ export default function PatientVisitScheduleApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome")
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null)
   const [history, setHistory] = useState<Screen[]>(["welcome"])
+  const [userFilter, setUserFilter] = useState<string | undefined>(undefined)
 
-  const navigate = (screen: Screen) => {
-    setHistory([...history, screen])
-    setCurrentScreen(screen)
+  const navigate = (screen: Screen | string) => {
+    // Handle admin-users with filter (e.g., "admin-users-Sponsor")
+    if (screen.startsWith("admin-users-")) {
+      const filter = screen.replace("admin-users-", "")
+      setUserFilter(filter)
+      setHistory([...history, "admin-users"])
+      setCurrentScreen("admin-users")
+      return
+    }
+    // Reset filter when navigating to admin-users without filter
+    if (screen === "admin-users") {
+      setUserFilter(undefined)
+    }
+    setHistory([...history, screen as Screen])
+    setCurrentScreen(screen as Screen)
   }
 
   const goBack = () => {
@@ -330,6 +343,7 @@ export default function PatientVisitScheduleApp() {
         return (
           <UserManagementScreen
             onBack={() => navigate("admin-dashboard")}
+            initialFilter={userFilter}
           />
         )
       case "admin-organizations":

@@ -121,38 +121,49 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
-            <div className="text-2xl font-bold text-[#1A3872] mb-3">
+            <div 
+              className="text-2xl font-bold text-[#1A3872] mb-3 cursor-pointer hover:text-[#2563EB] transition-colors"
+              onClick={() => onNavigate?.("admin-users")}
+            >
               {stats.totalUsers.toLocaleString()}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-blue-50 rounded-lg p-2 text-center">
+              <div 
+                className="bg-blue-50 rounded-lg p-2 text-center cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onNavigate?.("admin-users-Sponsor")}
+              >
                 <div className="text-lg font-semibold text-[#1A3872]">{stats.sponsors}</div>
                 <div className="text-xs text-gray-500">Sponsors</div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-2 text-center">
+              <div 
+                className="bg-blue-50 rounded-lg p-2 text-center cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onNavigate?.("admin-users-CRO")}
+              >
                 <div className="text-lg font-semibold text-[#1A3872]">{stats.cros}</div>
                 <div className="text-xs text-gray-500">CROs</div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-2 text-center">
+              <div 
+                className="bg-blue-50 rounded-lg p-2 text-center cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onNavigate?.("admin-users-Site")}
+              >
                 <div className="text-lg font-semibold text-[#1A3872]">{stats.pis}</div>
                 <div className="text-xs text-gray-500">PIs</div>
               </div>
-              <div className="bg-teal-50 rounded-lg p-2 text-center">
+              <div 
+                className="bg-teal-50 rounded-lg p-2 text-center cursor-pointer hover:bg-teal-100 transition-colors"
+                onClick={() => onNavigate?.("admin-users-Site")}
+              >
                 <div className="text-lg font-semibold text-[#0D9488]">{stats.researchTeam}</div>
                 <div className="text-xs text-gray-500">Research Team</div>
               </div>
-              <div className="bg-teal-50 rounded-lg p-2 text-center col-span-2">
+              <div 
+                className="bg-teal-50 rounded-lg p-2 text-center col-span-2 cursor-pointer hover:bg-teal-100 transition-colors"
+                onClick={() => onNavigate?.("admin-users-Patient")}
+              >
                 <div className="text-lg font-semibold text-[#0D9488]">{stats.patients.toLocaleString()}</div>
                 <div className="text-xs text-gray-500">Patients</div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              className="w-full mt-2 text-xs text-[#2563EB]"
-              onClick={() => onNavigate?.("admin-users")}
-            >
-              View All Users
-            </Button>
           </CardContent>
         </Card>
 

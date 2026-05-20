@@ -38,6 +38,7 @@ import {
 
 interface UserManagementScreenProps {
   onBack?: () => void;
+  initialFilter?: string;
 }
 
 const users = [
@@ -108,9 +109,9 @@ const users = [
   },
 ];
 
-export function UserManagementScreen({ onBack }: UserManagementScreenProps) {
+export function UserManagementScreen({ onBack, initialFilter }: UserManagementScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [orgTypeFilter, setOrgTypeFilter] = useState("all");
+  const [orgTypeFilter, setOrgTypeFilter] = useState(initialFilter || "all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<typeof users[0] | null>(null);
