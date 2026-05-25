@@ -37,6 +37,13 @@ import { AuditLogScreen } from "@/components/clinical/screens/admin/audit-log-sc
 import { InvitationManagementScreen } from "@/components/clinical/screens/admin/invitation-management-screen"
 import { TermsManagementScreen } from "@/components/clinical/screens/admin/terms-management-screen"
 import { ReportsScreen } from "@/components/clinical/screens/admin/reports-screen"
+import { MasterDataScreen } from "@/components/clinical/screens/admin/master-data-screen"
+import { EmergencyAccessScreen } from "@/components/clinical/screens/admin/emergency-access-screen"
+import { ForgotPasswordScreen } from "@/components/clinical/screens/forgot-password-screen"
+import { InvitePatientScreen } from "@/components/clinical/screens/invite-patient-screen"
+import { SessionTimeoutScreen } from "@/components/clinical/screens/session-timeout-screen"
+import { NoInternetScreen } from "@/components/clinical/screens/no-internet-screen"
+import { CalendarWeekScreen } from "@/components/clinical/screens/calendar-week-screen"
 import { cn } from "@/lib/utils"
 
 type Screen =
@@ -47,6 +54,7 @@ type Screen =
   | "password"
   | "success"
   | "sign-in"
+  | "forgot-password"
   | "sponsor-dashboard"
   | "investigator-dashboard"
   | "patient-dashboard"
@@ -57,6 +65,7 @@ type Screen =
   | "visit-detail"
   | "notifications"
   | "calendar"
+  | "calendar-week"
   | "calendar-day"
   // Patient modules
   | "my-visits"
@@ -75,6 +84,12 @@ type Screen =
   | "admin-invitations"
   | "admin-terms"
   | "admin-reports"
+  | "admin-master-data"
+  | "admin-emergency"
+  // Misc
+  | "invite-patient"
+  | "session-timeout"
+  | "no-internet"
 
 const screenCategories = [
   {
@@ -87,6 +102,7 @@ const screenCategories = [
       { id: "password", label: "Password" },
       { id: "success", label: "Success" },
       { id: "sign-in", label: "Sign In" },
+      { id: "forgot-password", label: "Forgot Password" },
     ],
   },
   {
@@ -113,6 +129,7 @@ const screenCategories = [
     screens: [
       { id: "notifications", label: "Notifications" },
       { id: "calendar", label: "Calendar Month" },
+      { id: "calendar-week", label: "Calendar Week" },
       { id: "calendar-day", label: "Calendar Day" },
     ],
   },
@@ -139,6 +156,16 @@ const screenCategories = [
       { id: "admin-audit", label: "Audit Logs" },
       { id: "admin-terms", label: "Terms & Policy" },
       { id: "admin-reports", label: "Reports" },
+      { id: "admin-master-data", label: "Master Data" },
+      { id: "admin-emergency", label: "Emergency Access" },
+    ],
+  },
+  {
+    name: "Misc Screens",
+    screens: [
+      { id: "invite-patient", label: "Invite Patient" },
+      { id: "session-timeout", label: "Session Timeout" },
+      { id: "no-internet", label: "No Internet" },
     ],
   },
 ]
@@ -181,7 +208,7 @@ export default function PatientVisitScheduleApp() {
           <WelcomeScreen
             onSignUp={() => navigate("entity-type")}
             onSignIn={() => navigate("sign-in")}
-            onForgotPassword={() => {}}
+            onForgotPassword={() => navigate("forgot-password")}
           />
         )
       case "entity-type":
@@ -234,7 +261,14 @@ export default function PatientVisitScheduleApp() {
               }
             }}
             onSignUp={() => navigate("entity-type")}
-            onForgotPassword={() => {}}
+            onForgotPassword={() => navigate("forgot-password")}
+          />
+        )
+      case "forgot-password":
+        return (
+          <ForgotPasswordScreen
+            onBack={goBack}
+            onSuccess={() => navigate("sign-in")}
           />
         )
       case "sponsor-dashboard":
@@ -288,6 +322,13 @@ export default function PatientVisitScheduleApp() {
       case "calendar":
         return (
           <CalendarMonthScreen
+            onNavigate={(screen) => navigate(screen as Screen)}
+            onBack={goBack}
+          />
+        )
+      case "calendar-week":
+        return (
+          <CalendarWeekScreen
             onNavigate={(screen) => navigate(screen as Screen)}
             onBack={goBack}
           />
@@ -392,6 +433,37 @@ export default function PatientVisitScheduleApp() {
         return (
           <ReportsScreen
             onBack={() => navigate("admin-dashboard")}
+          />
+        )
+      case "admin-master-data":
+        return (
+          <MasterDataScreen
+            onBack={() => navigate("admin-dashboard")}
+          />
+        )
+      case "admin-emergency":
+        return (
+          <EmergencyAccessScreen
+            onBack={() => navigate("admin-dashboard")}
+          />
+        )
+      case "invite-patient":
+        return (
+          <InvitePatientScreen
+            onBack={goBack}
+            onSuccess={() => navigate("patient-list")}
+          />
+        )
+      case "session-timeout":
+        return (
+          <SessionTimeoutScreen
+            onSignIn={() => navigate("sign-in")}
+          />
+        )
+      case "no-internet":
+        return (
+          <NoInternetScreen
+            onRetry={() => navigate("welcome")}
           />
         )
       default:
