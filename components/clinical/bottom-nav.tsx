@@ -1,14 +1,34 @@
 "use client"
 
-import { Home, Users, Calendar, Bell, User } from "lucide-react"
+import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+export type UserRole = "patient" | "sponsor" | "investigator" | "admin"
 
 interface BottomNavProps {
   activeTab: string
   onTabChange: (tab: string) => void
+  role?: UserRole
+  notificationCount?: number
 }
 
-const tabs = [
+const patientTabs = [
+  { id: "dashboard", label: "Home", icon: Home },
+  { id: "my-trial", label: "My Trial", icon: FlaskConical },
+  { id: "calendar", label: "Calendar", icon: Calendar },
+  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "me", label: "Me", icon: User },
+]
+
+const sponsorTabs = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "trials", label: "Trials", icon: FlaskConical },
+  { id: "sites", label: "Sites", icon: MapPin },
+  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "me", label: "Me", icon: User },
+]
+
+const investigatorTabs = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "patients", label: "Patients", icon: Users },
   { id: "calendar", label: "Calendar", icon: Calendar },
@@ -16,9 +36,11 @@ const tabs = [
   { id: "me", label: "Me", icon: User },
 ]
 
-export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+export function BottomNav({ activeTab, onTabChange, role = "investigator", notificationCount = 0 }: BottomNavProps) {
+  const tabs = role === "patient" ? patientTabs : role === "sponsor" ? sponsorTabs : investigatorTabs
+  
   return (
-    <div className="flex items-center justify-around py-2 bg-white border-t border-gray-200">
+    <div className="flex items-center justify-around h-16 bg-white border-t border-slate-100">
       {tabs.map((tab) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -27,12 +49,24 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1",
-              isActive ? "text-[#1A3872]" : "text-gray-500"
+              "relative flex flex-col items-center gap-1 px-3 py-2 transition-colors",
+              isActive ? "text-[#0D1B3E]" : "text-slate-400"
             )}
           >
-            <Icon className={cn("w-5 h-5", isActive ? "fill-current" : "")} />
-            <span className="text-xs">{tab.label}</span>
+            {/* Active indicator line */}
+            {isActive && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#0D1B3E] rounded-full" />
+            )}
+            <div className="relative">
+              <Icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} />
+              {/* Notification badge */}
+              {tab.id === "notifs" && notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium">{tab.label}</span>
           </button>
         )
       })}
