@@ -1,9 +1,9 @@
 "use client"
 
-import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard } from "lucide-react"
+import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard, MessageCircle, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type UserRole = "patient" | "sponsor" | "investigator" | "admin"
+export type UserRole = "patient" | "sponsor" | "investigator" | "pi" | "crc" | "admin"
 
 interface BottomNavProps {
   activeTab: string
@@ -36,8 +36,37 @@ const investigatorTabs = [
   { id: "me", label: "Me", icon: User },
 ]
 
+const piTabs = [
+  { id: "dashboard", label: "Dashboard", icon: Home },
+  { id: "patients", label: "Patients", icon: Users },
+  { id: "chat", label: "Messages", icon: MessageCircle },
+  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "me", label: "Me", icon: User },
+]
+
+const crcTabs = [
+  { id: "dashboard", label: "Dashboard", icon: Home },
+  { id: "patients", label: "Patients", icon: Users },
+  { id: "chat", label: "Messages", icon: MessageCircle },
+  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "me", label: "Me", icon: User },
+]
+
+const patientTabs2 = [
+  { id: "dashboard", label: "Home", icon: Home },
+  { id: "my-trial", label: "My Trial", icon: FlaskConical },
+  { id: "chat", label: "Messages", icon: MessageCircle },
+  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "me", label: "Me", icon: User },
+]
+
 export function BottomNav({ activeTab, onTabChange, role = "investigator", notificationCount = 0 }: BottomNavProps) {
-  const tabs = role === "patient" ? patientTabs : role === "sponsor" ? sponsorTabs : investigatorTabs
+  const tabs =
+    role === "patient" ? patientTabs2 :
+    role === "sponsor" ? sponsorTabs :
+    role === "pi" ? piTabs :
+    role === "crc" ? crcTabs :
+    investigatorTabs
   
   return (
     <div className="flex items-center justify-around h-16 bg-white border-t border-slate-100">

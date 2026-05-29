@@ -26,6 +26,8 @@ export function CalendarDayScreen({ onNavigate, onBack }: CalendarDayScreenProps
       type: "Follow-Up · Apollo Hospital",
       status: "Scheduled",
       color: "blue",
+      doctor: "Dr. R. Sharma",
+      doctorInitials: "RS",
     },
     {
       time: "11:30",
@@ -35,6 +37,8 @@ export function CalendarDayScreen({ onNavigate, onBack }: CalendarDayScreenProps
       type: "Screen Visit",
       status: "Overdue",
       color: "red",
+      doctor: "Dr. A. Krishnan",
+      doctorInitials: "AK",
     },
     {
       time: "14:00",
@@ -44,6 +48,8 @@ export function CalendarDayScreen({ onNavigate, onBack }: CalendarDayScreenProps
       type: "Randomization",
       status: "Completed",
       color: "teal",
+      doctor: "Dr. S. Rao",
+      doctorInitials: "SR",
     },
   ]
 
@@ -125,6 +131,29 @@ export function CalendarDayScreen({ onNavigate, onBack }: CalendarDayScreenProps
                       )}>
                         {visit.status}
                       </span>
+                      <div className={cn(
+                        "flex items-center gap-1.5 mt-2 pt-2",
+                        visit.color === "blue" && "border-t border-blue-200",
+                        visit.color === "red" && "border-t border-red-200",
+                        visit.color === "teal" && "border-t border-teal-200"
+                      )}>
+                        <div className={cn(
+                          "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0",
+                          visit.color === "blue" && "bg-blue-200 text-blue-800",
+                          visit.color === "red" && "bg-red-200 text-red-800",
+                          visit.color === "teal" && "bg-teal-200 text-teal-800"
+                        )}>
+                          {visit.doctorInitials}
+                        </div>
+                        <p className={cn(
+                          "text-[10px]",
+                          visit.color === "blue" && "text-blue-700",
+                          visit.color === "red" && "text-red-700",
+                          visit.color === "teal" && "text-teal-700"
+                        )}>
+                          {visit.doctor}
+                        </p>
+                      </div>
                     </button>
                   )}
                 </div>

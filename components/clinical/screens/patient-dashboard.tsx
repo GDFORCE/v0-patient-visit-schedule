@@ -199,8 +199,8 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                       </div>
                       <div>
                         <p className={cn(
-                          "font-medium text-[#0F172A] transition-all duration-300",
-                          med.status === "animating" && "line-through decoration-2"
+                          "font-medium text-[#0F172A] text-[15px]",
+                          med.status === "animating" && "animate-strikethrough"
                         )}>
                           {med.name} {med.dosage}
                         </p>
@@ -209,16 +209,16 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                         </p>
                         {med.status === "animating" && med.takenAt && (
                           <p className="text-xs text-[#16A34A] mt-1 animate-fade-in">
-                            Logged at {med.takenAt}
+                            ✓ Logged at {med.takenAt}
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end gap-2">
                       {med.status === "animating" && showUndo === med.id && collapsingId !== med.id && (
                         <button
                           onClick={() => handleUndo(med.id)}
-                          className="text-sm text-[#2563EB] font-medium hover:underline"
+                          className="text-[13px] text-[#2563EB] font-medium hover:underline"
                         >
                           Undo
                         </button>
@@ -227,14 +227,23 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                         onClick={() => med.status === "pending" && handleMedicationTick(med.id)}
                         disabled={med.status !== "pending"}
                         className={cn(
-                          "w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-0",
-                          med.status === "pending" 
-                            ? "border-slate-300 bg-white hover:border-[#0D9488] cursor-pointer" 
-                            : "border-[#0D9488] bg-[#0D9488]"
+                          "flex items-center gap-1.5 cursor-pointer select-none",
                         )}
                       >
-                        {med.status !== "pending" && (
-                          <Check className="w-4 h-4 text-white" />
+                        <div className={cn(
+                          "w-[22px] h-[22px] rounded border-2 flex items-center justify-center transition-colors duration-100",
+                          med.status === "pending"
+                            ? "border-[#CBD5E1] bg-white"
+                            : "border-[#0D9488] bg-[#0D9488]"
+                        )}>
+                          {med.status !== "pending" && (
+                            <Check className="w-3.5 h-3.5 text-white" />
+                          )}
+                        </div>
+                        {med.status === "pending" && (
+                          <span className="text-[13px] text-[#64748B] leading-tight">
+                            Confirm<br />taken
+                          </span>
                         )}
                       </button>
                     </div>
@@ -276,9 +285,9 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
         onTabChange={(tab) => {
           setActiveTab(tab)
           if (tab === "my-trial") onNavigate("my-trial")
-          if (tab === "calendar") onNavigate("calendar")
-          if (tab === "notifs") onNavigate("notifications")
-          if (tab === "me") onNavigate("profile-settings")
+          if (tab === "chat")     onNavigate("chat")
+          if (tab === "notifs")   onNavigate("notifications")
+          if (tab === "me")       onNavigate("profile-settings")
         }} 
       />
     </div>

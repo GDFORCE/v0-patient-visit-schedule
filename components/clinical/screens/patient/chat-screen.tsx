@@ -1,387 +1,522 @@
-"use client";
+"use client"
 
-import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, Send, Mic, Paperclip, Image, FileText, MoreVertical, Phone, Video, Check, CheckCheck, Play, Pause, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react"
+import { ChevronLeft, Send, Mic, Paperclip, Image, FileText, MoreVertical, Check, CheckCheck, Play, Pause, X, Search, Camera } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface ChatScreenProps {
-  onBack?: () => void;
+// ── Types ────────────────────────────────────────────────
+
+type ChannelType = "sponsor-pi" | "sponsor-rt" | "pi-patient" | "rt-patient" | "admin-user"
+type UserRole = "sponsor" | "cro" | "pi" | "research-team" | "patient" | "admin"
+
+interface ChatChannel {
+  id: string
+  name: string
+  role: string
+  avatar: string
+  lastMessage: string
+  time: string
+  unread: number
+  online: boolean
+  channelType: ChannelType
 }
 
 interface Message {
-  id: string;
-  sender: string;
-  senderRole: "patient" | "pi" | "coordinator";
-  content: string;
-  type: "text" | "voice" | "document" | "image";
-  timestamp: string;
-  status: "sent" | "delivered" | "read";
-  attachmentName?: string;
-  duration?: number;
+  id: string
+  sender: string
+  isSelf: boolean
+  content: string
+  type: "text" | "voice" | "document" | "image"
+  timestamp: string
+  status: "sent" | "delivered" | "read"
+  attachmentName?: string
+  attachmentSize?: string
+  duration?: number
 }
 
-const initialMessages: Message[] = [
-  {
-    id: "1",
-    sender: "Dr. Sarah Johnson",
-    senderRole: "pi",
-    content: "Good morning! How are you feeling today after your last visit?",
-    type: "text",
-    timestamp: "9:00 AM",
-    status: "read",
-  },
-  {
-    id: "2",
-    sender: "You",
-    senderRole: "patient",
-    content: "Good morning Dr. Johnson! I'm feeling much better. The new medication seems to be working well.",
-    type: "text",
-    timestamp: "9:15 AM",
-    status: "read",
-  },
-  {
-    id: "3",
-    sender: "Emily Chen",
-    senderRole: "coordinator",
-    content: "That's great to hear! Just a reminder that your next visit is scheduled for February 26th at 2:00 PM. It will be a telephonic visit.",
-    type: "text",
-    timestamp: "9:20 AM",
-    status: "read",
-  },
-  {
-    id: "4",
-    sender: "Dr. Sarah Johnson",
-    senderRole: "pi",
-    content: "Excellent progress! Please continue to monitor any side effects and let us know if anything changes.",
-    type: "text",
-    timestamp: "9:25 AM",
-    status: "read",
-  },
-  {
-    id: "5",
-    sender: "You",
-    senderRole: "patient",
-    content: "",
-    type: "voice",
-    timestamp: "9:30 AM",
-    status: "delivered",
-    duration: 15,
-  },
-  {
-    id: "6",
-    sender: "Emily Chen",
-    senderRole: "coordinator",
-    content: "",
-    type: "document",
-    timestamp: "9:35 AM",
-    status: "read",
-    attachmentName: "Visit_Instructions.pdf",
-  },
-];
+interface ChatScreenProps {
+  onBack?: () => void
+  userRole?: UserRole
+}
 
-const chatParticipants = [
-  { name: "Dr. Sarah Johnson", role: "Principal Investigator", avatar: "SJ", online: true },
-  { name: "Emily Chen", role: "Research Coordinator", avatar: "EC", online: true },
-  { name: "Dr. Michael Park", role: "Sub-Investigator", avatar: "MP", online: false },
-];
+// ── Data ─────────────────────────────────────────────────
 
-export function ChatScreen({ onBack }: ChatScreenProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [inputText, setInputText] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recordingInterval = useRef<NodeJS.Timeout | null>(null);
+const allChannels: ChatChannel[] = [
+  // Sponsor ↔ Sites
+  { id: "sp-pi-1", name: "Dr. Rajesh Sharma",  role: "PI — Apollo Mumbai",          avatar: "RS", lastMessage: "Site visit confirmed for next Monday",       time: "10:30 AM",  unread: 2, online: true,  channelType: "sponsor-pi" },
+  { id: "sp-pi-2", name: "Dr. Sunita Rao",     role: "PI — Max Delhi",              avatar: "SR", lastMessage: "Patient SUBJ-003 needs attention",           time: "Yesterday", unread: 1, online: false, channelType: "sponsor-pi" },
+  { id: "sp-pi-3", name: "Dr. Anand Krishnan", role: "PI — Fortis Bangalore",       avatar: "AK", lastMessage: "Enrollment on track for this quarter",       time: "2d ago",    unread: 0, online: true,  channelType: "sponsor-pi" },
+  { id: "sp-rt-1", name: "Ms. Priya Desai",    role: "Research Team — Apollo",      avatar: "PD", lastMessage: "Visit 7 completion form submitted",          time: "9:15 AM",   unread: 0, online: true,  channelType: "sponsor-rt" },
+  { id: "sp-rt-2", name: "Mr. Amit Singh",     role: "Research Team — Max Delhi",   avatar: "AS", lastMessage: "Screen failure report attached",             time: "Yesterday", unread: 0, online: false, channelType: "sponsor-rt" },
+  // PI/RT ↔ Patients
+  { id: "pi-pt-1", name: "SUBJ-001 (Priya K.)", role: "Patient — Protocol-001",     avatar: "PK", lastMessage: "I feel a bit dizzy after the last dose",     time: "11:00 AM",  unread: 3, online: true,  channelType: "pi-patient" },
+  { id: "pi-pt-2", name: "SUBJ-002 (Arjun M.)", role: "Patient — Protocol-001",     avatar: "AM", lastMessage: "Is it okay to skip the morning dose?",       time: "Yesterday", unread: 1, online: false, channelType: "pi-patient" },
+  { id: "pi-pt-3", name: "SUBJ-004 (Meena R.)", role: "Patient — Protocol-002",     avatar: "MR", lastMessage: "Reminder: Visit 5 is tomorrow at 10 AM",     time: "2d ago",    unread: 0, online: false, channelType: "pi-patient" },
+  { id: "rt-pt-1", name: "SUBJ-001 (Priya K.)", role: "Patient — Protocol-001",     avatar: "PK", lastMessage: "I took the medication this morning",          time: "8:45 AM",   unread: 2, online: true,  channelType: "rt-patient" },
+  { id: "rt-pt-2", name: "SUBJ-003 (Kavitha S.)", role: "Patient — Protocol-001",   avatar: "KS", lastMessage: "Visit rescheduled to Friday",                time: "Yesterday", unread: 0, online: false, channelType: "rt-patient" },
+  // Admin ↔ Users
+  { id: "adm-1",  name: "MTB Admin",           role: "Platform Administrator",      avatar: "MA", lastMessage: "Your support ticket #1042 is resolved",      time: "2d ago",    unread: 0, online: true,  channelType: "admin-user" },
+]
+
+// What channels each role can see
+const roleChannelTypes: Record<UserRole, ChannelType[]> = {
+  "sponsor":       ["sponsor-pi", "sponsor-rt", "admin-user"],
+  "cro":           ["sponsor-pi", "sponsor-rt", "admin-user"],
+  "pi":            ["sponsor-pi", "pi-patient", "admin-user"],
+  "research-team": ["sponsor-rt", "rt-patient", "admin-user"],
+  "patient":       ["pi-patient", "rt-patient"],
+  "admin":         ["sponsor-pi", "sponsor-rt", "pi-patient", "rt-patient", "admin-user"],
+}
+
+const channelTypeLabel: Record<ChannelType, string> = {
+  "sponsor-pi": "Sponsor ↔ PI",
+  "sponsor-rt": "Sponsor ↔ Research Team",
+  "pi-patient": "PI ↔ Patients",
+  "rt-patient": "Research Team ↔ Patients",
+  "admin-user": "MTB Admin",
+}
+
+const channelTypeColor: Record<ChannelType, string> = {
+  "sponsor-pi": "bg-blue-100 text-blue-700",
+  "sponsor-rt": "bg-teal-100 text-teal-700",
+  "pi-patient": "bg-purple-100 text-purple-700",
+  "rt-patient": "bg-emerald-100 text-emerald-700",
+  "admin-user": "bg-red-100 text-red-700",
+}
+
+// Sample conversation messages per channel
+const channelMessages: Record<string, Message[]> = {
+  "sp-pi-1": [
+    { id: "1", sender: "Dr. Rajesh Sharma", isSelf: false, content: "Good morning! We have completed enrollment for Protocol-001 at Apollo.", type: "text", timestamp: "9:00 AM", status: "read" },
+    { id: "2", sender: "You", isSelf: true, content: "Excellent news! What's the current screen failure rate?", type: "text", timestamp: "9:10 AM", status: "read" },
+    { id: "3", sender: "Dr. Rajesh Sharma", isSelf: false, content: "", type: "document", timestamp: "9:15 AM", status: "read", attachmentName: "Enrollment_Report_May2025.pdf", attachmentSize: "1.2 MB" },
+    { id: "4", sender: "You", isSelf: true, content: "Thank you. Site visit confirmed for next Monday at 10 AM.", type: "text", timestamp: "10:28 AM", status: "read" },
+    { id: "5", sender: "Dr. Rajesh Sharma", isSelf: false, content: "Site visit confirmed for next Monday", type: "text", timestamp: "10:30 AM", status: "read" },
+  ],
+  "pi-pt-1": [
+    { id: "1", sender: "You", isSelf: true, content: "Good morning Priya! How are you feeling after Visit 6?", type: "text", timestamp: "8:30 AM", status: "read" },
+    { id: "2", sender: "SUBJ-001", isSelf: false, content: "Good morning Doctor. I feel a bit dizzy after the last dose.", type: "text", timestamp: "11:00 AM", status: "read" },
+    { id: "3", sender: "You", isSelf: true, content: "Thank you for letting us know. Please rest and stay hydrated. I'll review your medication.", type: "text", timestamp: "11:05 AM", status: "delivered" },
+  ],
+  "rt-pt-1": [
+    { id: "1", sender: "You", isSelf: true, content: "Hi Priya, reminder to take your morning medication by 9 AM!", type: "text", timestamp: "8:00 AM", status: "read" },
+    { id: "2", sender: "SUBJ-001", isSelf: false, content: "I took the medication this morning", type: "text", timestamp: "8:45 AM", status: "read" },
+    { id: "3", sender: "SUBJ-001", isSelf: false, content: "", type: "document", timestamp: "8:46 AM", status: "read", attachmentName: "Medication_Log_Today.jpg", attachmentSize: "320 KB" },
+    { id: "4", sender: "You", isSelf: true, content: "Great, thank you! Log confirmed.", type: "text", timestamp: "8:50 AM", status: "sent" },
+  ],
+  "adm-1": [
+    { id: "1", sender: "MTB Admin", isSelf: false, content: "Your support ticket #1042 regarding the protocol upload error has been resolved.", type: "text", timestamp: "2d ago", status: "read" },
+    { id: "2", sender: "You", isSelf: true, content: "Thank you! The upload is working now.", type: "text", timestamp: "2d ago", status: "read" },
+  ],
+}
+
+const defaultMessages: Message[] = [
+  { id: "1", sender: "Them", isSelf: false, content: "Hello! How can I help you today?", type: "text", timestamp: "Just now", status: "read" },
+]
+
+// ── Helpers ──────────────────────────────────────────────
+
+function getStatusIcon(status: string, isSelf: boolean) {
+  if (!isSelf) return null
+  if (status === "sent")      return <Check className="h-3 w-3 text-gray-400" />
+  if (status === "delivered") return <CheckCheck className="h-3 w-3 text-gray-400" />
+  if (status === "read")      return <CheckCheck className="h-3 w-3 text-[#2563EB]" />
+  return null
+}
+
+// ── Main Component ───────────────────────────────────────
+
+export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
+  const [activeChannel, setActiveChannel] = useState<ChatChannel | null>(null)
+  const [channelFilter, setChannelFilter] = useState<ChannelType | "all">("all")
+  const [search, setSearch]               = useState("")
+  const [messages, setMessages]           = useState<Message[]>(defaultMessages)
+  const [inputText, setInputText]         = useState("")
+  const [isRecording, setIsRecording]     = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [playingVoice, setPlayingVoice]   = useState<string | null>(null)
+  const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const messagesEndRef   = useRef<HTMLDivElement>(null)
+  const recordingTimer   = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Channels this role can see
+  const allowedTypes  = roleChannelTypes[userRole]
+  const visibleChannels = allChannels.filter(ch => allowedTypes.includes(ch.channelType))
+
+  const filteredChannels = visibleChannels.filter(ch => {
+    const matchFilter = channelFilter === "all" || ch.channelType === channelFilter
+    const matchSearch = search === "" || ch.name.toLowerCase().includes(search.toLowerCase()) || ch.role.toLowerCase().includes(search.toLowerCase())
+    return matchFilter && matchSearch
+  })
+
+  // Group channels by type for display
+  const groupedChannels = allowedTypes.reduce<Record<string, ChatChannel[]>>((acc, type) => {
+    const items = filteredChannels.filter(ch => ch.channelType === type)
+    if (items.length > 0) acc[type] = items
+    return acc
+  }, {})
+
+  const totalUnread = visibleChannels.reduce((sum, ch) => sum + ch.unread, 0)
+
+  const openChannel = (ch: ChatChannel) => {
+    setActiveChannel(ch)
+    setMessages(channelMessages[ch.id] ?? defaultMessages)
+    setShowAttachMenu(false)
+  }
 
   const handleSend = () => {
-    if (!inputText.trim()) return;
-    
-    const newMessage: Message = {
+    if (!inputText.trim()) return
+    const msg: Message = {
       id: Date.now().toString(),
       sender: "You",
-      senderRole: "patient",
+      isSelf: true,
       content: inputText,
       type: "text",
       timestamp: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
       status: "sent",
-    };
-    
-    setMessages([...messages, newMessage]);
-    setInputText("");
-  };
+    }
+    setMessages(prev => [...prev, msg])
+    setInputText("")
+  }
+
+  const handleAttach = (type: "document" | "image") => {
+    setShowAttachMenu(false)
+    const msg: Message = {
+      id: Date.now().toString(),
+      sender: "You",
+      isSelf: true,
+      content: "",
+      type,
+      timestamp: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      status: "sent",
+      attachmentName: type === "document" ? "Protocol_Document.pdf" : "Photo_20250526.jpg",
+      attachmentSize: type === "document" ? "2.1 MB" : "480 KB",
+    }
+    setMessages(prev => [...prev, msg])
+  }
 
   const startRecording = () => {
-    setIsRecording(true);
-    setRecordingTime(0);
-    recordingInterval.current = setInterval(() => {
-      setRecordingTime((t) => t + 1);
-    }, 1000);
-  };
+    setIsRecording(true)
+    setRecordingTime(0)
+    recordingTimer.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
+  }
 
   const stopRecording = () => {
-    setIsRecording(false);
-    if (recordingInterval.current) {
-      clearInterval(recordingInterval.current);
-    }
-    
+    setIsRecording(false)
+    if (recordingTimer.current) clearInterval(recordingTimer.current)
     if (recordingTime > 0) {
-      const newMessage: Message = {
+      const msg: Message = {
         id: Date.now().toString(),
         sender: "You",
-        senderRole: "patient",
+        isSelf: true,
         content: "",
         type: "voice",
         timestamp: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
         status: "sent",
         duration: recordingTime,
-      };
-      setMessages([...messages, newMessage]);
+      }
+      setMessages(prev => [...prev, msg])
     }
-    setRecordingTime(0);
-  };
+    setRecordingTime(0)
+  }
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "pi":
-        return "text-[#2563EB]";
-      case "coordinator":
-        return "text-emerald-600";
-      default:
-        return "text-gray-600";
-    }
-  };
+  // ── Conversation View ─────────────────────────────────
+  if (activeChannel) {
+    return (
+      <div className="flex flex-col h-full bg-[#F0F4F8]">
+        {/* Header */}
+        <div className="bg-[#1A3872] text-white px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setActiveChannel(null)} className="p-1">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold flex-shrink-0">
+            {activeChannel.avatar}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-tight truncate">{activeChannel.name}</p>
+            <p className="text-[11px] text-blue-200 truncate">{activeChannel.role}</p>
+          </div>
+          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0", channelTypeColor[activeChannel.channelType])}>
+            {channelTypeLabel[activeChannel.channelType]}
+          </span>
+          <button className="p-1.5"><MoreVertical className="h-4 w-4" /></button>
+        </div>
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "sent":
-        return <Check className="h-3 w-3 text-gray-400" />;
-      case "delivered":
-        return <CheckCheck className="h-3 w-3 text-gray-400" />;
-      case "read":
-        return <CheckCheck className="h-3 w-3 text-[#2563EB]" />;
-      default:
-        return null;
-    }
-  };
+        {/* Messages */}
+        <div className="flex-1 overflow-auto px-4 py-4 space-y-3">
+          {messages.map(msg => (
+            <div key={msg.id} className={cn("flex", msg.isSelf ? "justify-end" : "justify-start")}>
+              {!msg.isSelf && (
+                <div className="w-7 h-7 rounded-full bg-slate-300 flex items-center justify-center text-xs font-bold text-slate-600 mr-2 flex-shrink-0 self-end">
+                  {activeChannel.avatar}
+                </div>
+              )}
+              <div className="max-w-[78%]">
+                {/* Text */}
+                {msg.type === "text" && (
+                  <div className={cn(
+                    "rounded-2xl px-4 py-2.5",
+                    msg.isSelf
+                      ? "bg-[#1A3872] text-white rounded-br-sm"
+                      : "bg-white text-gray-900 rounded-bl-sm shadow-sm"
+                  )}>
+                    <p className="text-sm leading-snug">{msg.content}</p>
+                  </div>
+                )}
 
+                {/* Document */}
+                {msg.type === "document" && (
+                  <div className={cn(
+                    "rounded-2xl px-3 py-2.5 flex items-center gap-3",
+                    msg.isSelf ? "bg-[#1A3872] rounded-br-sm" : "bg-white shadow-sm rounded-bl-sm"
+                  )}>
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0", msg.isSelf ? "bg-white/20" : "bg-red-50")}>
+                      <FileText className={cn("h-5 w-5", msg.isSelf ? "text-white" : "text-red-500")} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={cn("text-xs font-semibold truncate", msg.isSelf ? "text-white" : "text-[#0F172A]")}>{msg.attachmentName}</p>
+                      <p className={cn("text-[10px]", msg.isSelf ? "text-white/60" : "text-slate-400")}>{msg.attachmentSize} · Tap to open</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Image */}
+                {msg.type === "image" && (
+                  <div className={cn(
+                    "rounded-2xl overflow-hidden",
+                    msg.isSelf ? "rounded-br-sm" : "rounded-bl-sm shadow-sm"
+                  )}>
+                    <div className={cn("w-48 h-36 flex flex-col items-center justify-center gap-2", msg.isSelf ? "bg-[#1A3872]" : "bg-slate-100")}>
+                      <Camera className={cn("h-8 w-8", msg.isSelf ? "text-white/60" : "text-slate-400")} />
+                      <p className={cn("text-xs", msg.isSelf ? "text-white/70" : "text-slate-500")}>{msg.attachmentName}</p>
+                      <p className={cn("text-[10px]", msg.isSelf ? "text-white/50" : "text-slate-400")}>{msg.attachmentSize}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Voice */}
+                {msg.type === "voice" && (
+                  <div className={cn(
+                    "rounded-2xl px-3 py-2.5 flex items-center gap-3",
+                    msg.isSelf ? "bg-[#1A3872] rounded-br-sm" : "bg-white shadow-sm rounded-bl-sm"
+                  )}>
+                    <button
+                      onClick={() => setPlayingVoice(playingVoice === msg.id ? null : msg.id)}
+                      className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", msg.isSelf ? "bg-white/20" : "bg-blue-100")}
+                    >
+                      {playingVoice === msg.id
+                        ? <Pause className={cn("h-4 w-4", msg.isSelf ? "text-white" : "text-[#1A3872]")} />
+                        : <Play  className={cn("h-4 w-4", msg.isSelf ? "text-white" : "text-[#1A3872]")} />
+                      }
+                    </button>
+                    <div className={cn("flex-1 h-1 rounded-full", msg.isSelf ? "bg-white/30" : "bg-slate-200")}>
+                      <div className={cn("h-1 w-1/3 rounded-full", msg.isSelf ? "bg-white" : "bg-[#1A3872]")} />
+                    </div>
+                    <span className={cn("text-xs flex-shrink-0", msg.isSelf ? "text-white/70" : "text-slate-500")}>{fmt(msg.duration ?? 0)}</span>
+                  </div>
+                )}
+
+                {/* Timestamp + status */}
+                <div className={cn("flex items-center gap-1 mt-1", msg.isSelf ? "justify-end" : "justify-start")}>
+                  <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+                  {getStatusIcon(msg.status, msg.isSelf)}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Recording bar */}
+        {isRecording && (
+          <div className="bg-red-50 px-4 py-3 flex items-center justify-between border-t border-red-100">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-sm text-red-600 font-medium">Recording… {fmt(recordingTime)}</span>
+            </div>
+            <button onClick={stopRecording} className="text-sm text-red-600 font-semibold">Stop</button>
+          </div>
+        )}
+
+        {/* Attach menu */}
+        {showAttachMenu && !isRecording && (
+          <div className="bg-white border-t border-slate-100 px-4 py-3 flex gap-4">
+            <button onClick={() => handleAttach("document")} className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-red-500" />
+              </div>
+              <span className="text-[10px] text-slate-500 font-medium">Document</span>
+            </button>
+            <button onClick={() => handleAttach("image")} className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+                <Image className="h-6 w-6 text-purple-500" />
+              </div>
+              <span className="text-[10px] text-slate-500 font-medium">Photo</span>
+            </button>
+            <button onClick={() => handleAttach("image")} className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Camera className="h-6 w-6 text-blue-500" />
+              </div>
+              <span className="text-[10px] text-slate-500 font-medium">Camera</span>
+            </button>
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="bg-white border-t border-gray-200 px-3 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAttachMenu(!showAttachMenu)}
+              className={cn("p-2 rounded-full transition-colors", showAttachMenu ? "bg-blue-100 text-[#1A3872]" : "text-gray-400 hover:text-gray-600")}
+            >
+              <Paperclip className="h-5 w-5" />
+            </button>
+            <div className="flex-1">
+              <input
+                type="text"
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSend()}
+                placeholder="Type a message…"
+                className="w-full px-4 py-2 bg-gray-100 rounded-full text-sm outline-none"
+              />
+            </div>
+            {inputText.trim() ? (
+              <button onClick={handleSend} className="p-2 bg-[#1A3872] text-white rounded-full flex-shrink-0">
+                <Send className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={() => { if (isRecording) stopRecording() }}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={cn("p-2 rounded-full transition-colors flex-shrink-0", isRecording ? "bg-red-500 text-white" : "bg-gray-100 text-gray-600")}
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Channel List View ─────────────────────────────────
   return (
     <div className="flex flex-col h-full bg-[#F8FAFC]">
       {/* Header */}
       <div className="bg-[#1A3872] text-white px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {onBack && (
-              <button onClick={onBack} className="p-1">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-            )}
-            <div>
-              <h1 className="text-base font-semibold">Trial Chat</h1>
-              <p className="text-xs text-blue-200">ONCO-2024-001 - 3 participants</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 hover:bg-white/10 rounded-full">
-              <Phone className="h-5 w-5" />
-            </button>
-            <button className="p-2 hover:bg-white/10 rounded-full">
-              <Video className="h-5 w-5" />
-            </button>
-            <button 
-              onClick={() => setShowParticipants(!showParticipants)}
-              className="p-2 hover:bg-white/10 rounded-full"
-            >
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Participants Panel */}
-      {showParticipants && (
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Participants</h3>
-            <button onClick={() => setShowParticipants(false)}>
-              <X className="h-4 w-4 text-gray-400" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {chatParticipants.map((participant) => (
-              <div key={participant.name} className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-[#DBEAFE] flex items-center justify-center text-xs font-medium text-[#1A3872]">
-                    {participant.avatar}
-                  </div>
-                  {participant.online && (
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{participant.name}</p>
-                  <p className="text-xs text-gray-500">{participant.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.map((message) => {
-          const isPatient = message.senderRole === "patient";
-          
-          return (
-            <div
-              key={message.id}
-              className={cn("flex", isPatient ? "justify-end" : "justify-start")}
-            >
-              <div className={cn("max-w-[80%]", isPatient ? "order-1" : "order-2")}>
-                {!isPatient && (
-                  <p className={cn("text-xs font-medium mb-1", getRoleColor(message.senderRole))}>
-                    {message.sender}
-                  </p>
-                )}
-                
-                <div
-                  className={cn(
-                    "rounded-2xl px-4 py-2",
-                    isPatient
-                      ? "bg-[#1A3872] text-white rounded-br-sm"
-                      : "bg-white text-gray-900 rounded-bl-sm shadow-sm"
-                  )}
-                >
-                  {message.type === "text" && (
-                    <p className="text-sm">{message.content}</p>
-                  )}
-                  
-                  {message.type === "voice" && (
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setPlayingVoice(playingVoice === message.id ? null : message.id)}
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center",
-                          isPatient ? "bg-white/20" : "bg-[#DBEAFE]"
-                        )}
-                      >
-                        {playingVoice === message.id ? (
-                          <Pause className={cn("h-4 w-4", isPatient ? "text-white" : "text-[#1A3872]")} />
-                        ) : (
-                          <Play className={cn("h-4 w-4", isPatient ? "text-white" : "text-[#1A3872]")} />
-                        )}
-                      </button>
-                      <div className="flex-1">
-                        <div className={cn("h-1 rounded-full", isPatient ? "bg-white/30" : "bg-gray-200")}>
-                          <div className={cn("h-1 rounded-full w-1/3", isPatient ? "bg-white" : "bg-[#2563EB]")} />
-                        </div>
-                      </div>
-                      <span className={cn("text-xs", isPatient ? "text-white/70" : "text-gray-500")}>
-                        {formatDuration(message.duration || 0)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {message.type === "document" && (
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        isPatient ? "bg-white/20" : "bg-red-100"
-                      )}>
-                        <FileText className={cn("h-5 w-5", isPatient ? "text-white" : "text-red-600")} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{message.attachmentName}</p>
-                        <p className={cn("text-xs", isPatient ? "text-white/70" : "text-gray-500")}>
-                          Tap to download
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className={cn("flex items-center gap-1 mt-1", isPatient ? "justify-end" : "justify-start")}>
-                  <span className="text-xs text-gray-400">{message.timestamp}</span>
-                  {isPatient && getStatusIcon(message.status)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Recording Indicator */}
-      {isRecording && (
-        <div className="bg-red-50 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-sm text-red-600">Recording... {formatDuration(recordingTime)}</span>
-          </div>
-          <button
-            onClick={stopRecording}
-            className="text-sm text-red-600 font-medium"
-          >
-            Stop
-          </button>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-3">
-        <div className="flex items-center gap-2">
-          <button className="p-2 text-gray-400 hover:text-gray-600">
-            <Paperclip className="h-5 w-5" />
-          </button>
-          <button className="p-2 text-gray-400 hover:text-gray-600">
-            <Image className="h-5 w-5" />
-          </button>
-          
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type a message..."
-              className="w-full px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
-            />
-          </div>
-          
-          {inputText.trim() ? (
-            <button
-              onClick={handleSend}
-              className="p-2 bg-[#1A3872] text-white rounded-full"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          ) : (
-            <button
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onMouseLeave={stopRecording}
-              className={cn(
-                "p-2 rounded-full transition-colors",
-                isRecording ? "bg-red-500 text-white" : "bg-gray-100 text-gray-600"
-              )}
-            >
-              <Mic className="h-5 w-5" />
+        <div className="flex items-center gap-3 mb-3">
+          {onBack && (
+            <button onClick={onBack} className="p-1">
+              <ChevronLeft className="h-5 w-5" />
             </button>
           )}
+          <div className="flex-1">
+            <h1 className="text-base font-semibold">Messages</h1>
+            <p className="text-xs text-blue-200">
+              {totalUnread > 0 ? `${totalUnread} unread` : "All caught up"}
+            </p>
+          </div>
+        </div>
+        {/* Search */}
+        <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3 py-2">
+          <Search className="h-4 w-4 text-white/60 flex-shrink-0" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search conversations…"
+            className="flex-1 bg-transparent text-white placeholder-white/50 text-sm outline-none"
+          />
+          {search && <button onClick={() => setSearch("")}><X className="h-4 w-4 text-white/60" /></button>}
         </div>
       </div>
+
+      {/* Filter chips */}
+      <div className="flex gap-2 px-4 py-2.5 bg-white border-b border-slate-100 overflow-x-auto">
+        <button
+          onClick={() => setChannelFilter("all")}
+          className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+            channelFilter === "all" ? "bg-[#1A3872] text-white border-[#1A3872]" : "bg-white text-slate-600 border-slate-200")}
+        >
+          All ({visibleChannels.length})
+        </button>
+        {allowedTypes.map(type => (
+          <button
+            key={type}
+            onClick={() => setChannelFilter(type)}
+            className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap",
+              channelFilter === type ? "bg-[#1A3872] text-white border-[#1A3872]" : "bg-white text-slate-600 border-slate-200")}
+          >
+            {channelTypeLabel[type]}
+          </button>
+        ))}
+      </div>
+
+      {/* Channel list grouped */}
+      <div className="flex-1 overflow-auto">
+        {Object.entries(groupedChannels).map(([type, channels]) => (
+          <div key={type}>
+            {/* Section header */}
+            <div className={cn("px-4 py-2 flex items-center gap-2", channelTypeColor[type as ChannelType])}>
+              <span className="text-[11px] font-bold uppercase tracking-wider">
+                {channelTypeLabel[type as ChannelType]}
+              </span>
+            </div>
+
+            {channels.map(ch => (
+              <button
+                key={ch.id}
+                onClick={() => openChannel(ch)}
+                className="w-full px-4 py-3.5 flex items-center gap-3 bg-white border-b border-slate-50 hover:bg-slate-50 text-left"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-[#DBEAFE] flex items-center justify-center text-sm font-bold text-[#1A3872]">
+                    {ch.avatar}
+                  </div>
+                  {ch.online && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={cn("text-sm truncate", ch.unread > 0 ? "font-bold text-[#0F172A]" : "font-medium text-[#0F172A]")}>
+                      {ch.name}
+                    </p>
+                    <p className={cn("text-[11px] flex-shrink-0 ml-2", ch.unread > 0 ? "text-[#1A3872] font-semibold" : "text-slate-400")}>
+                      {ch.time}
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">{ch.role}</p>
+                  <p className={cn("text-xs truncate mt-0.5", ch.unread > 0 ? "text-slate-700 font-medium" : "text-slate-400")}>
+                    {ch.lastMessage}
+                  </p>
+                </div>
+                {ch.unread > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-[#1A3872] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    {ch.unread}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        ))}
+
+        {filteredChannels.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-48 gap-3 text-center px-6">
+            <Search className="w-10 h-10 text-slate-300" />
+            <p className="text-slate-500 font-medium text-sm">No conversations found</p>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }

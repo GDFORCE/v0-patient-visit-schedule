@@ -128,3 +128,30 @@
                                                                                                                                                                                                                                       }
                                                                                                                                                                                                                                       }
                                                                                                                                                                                                                                       
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 300ms ease forwards;
+}
+
+@keyframes strikethrough {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+.animate-strikethrough {
+  position: relative;
+  display: inline-block;
+}
+.animate-strikethrough::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background-color: #0F172A;
+  transform: translateY(-50%);
+  animation: strikethrough 300ms ease forwards;
+}

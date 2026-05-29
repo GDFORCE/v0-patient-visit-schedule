@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface CalendarWeekScreenProps {
   onBack?: () => void
@@ -21,19 +22,41 @@ const weekVisits = [
 ]
 
 const weekDays = [
+  { day: "Sun", date: 18 },
   { day: "Mon", date: 19 },
   { day: "Tue", date: 20 },
   { day: "Wed", date: 21 },
   { day: "Thu", date: 22 },
   { day: "Fri", date: 23 },
   { day: "Sat", date: 24 },
-  { day: "Sun", date: 25 },
 ]
+
+type PeriodType = "prev-month" | "prev-week" | "current" | "next-week" | "next-month" | "overall"
 
 const timeSlots = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"]
 
+const periodLabels: Record<PeriodType, string> = {
+  "prev-month": "Prev Month",
+  "prev-week": "Prev Week",
+  "current": "Current Week",
+  "next-week": "Next Week",
+  "next-month": "Next Month",
+  "overall": "Overall",
+}
+
+const weekRanges: Record<PeriodType, string> = {
+  "prev-month": "21 Apr – 27 Apr 2025",
+  "prev-week": "11–17 May 2025",
+  "current": "18–24 May 2025",
+  "next-week": "25–31 May 2025",
+  "next-month": "22–28 Jun 2025",
+  "overall": "All Visits",
+}
+
 export function CalendarWeekScreen({ onBack, onNavigate }: CalendarWeekScreenProps) {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week")
+  const [period, setPeriod] = useState<PeriodType>("current")
+  const [showPeriodPicker, setShowPeriodPicker] = useState(false)
 
   const getVisitsForDayAndTime = (date: number, time: string) => {
     return weekVisits.filter((v) => v.date === date && v.time === time)
@@ -62,16 +85,33 @@ export function CalendarWeekScreen({ onBack, onNavigate }: CalendarWeekScreenPro
           <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
-          <div className="flex items-center gap-2">
-            <button className="p-1 hover:bg-gray-100 rounded">
+          <div className="flex items-center gap-2 relative">
+            <button onClick={() => {
+              const order: PeriodType[] = ["prev-month","prev-week","current","next-week","next-month","overall"]
+              const idx = order.indexOf(period); if (idx > 0) setPeriod(order[idx - 1])
+            }} className="p-1 hover:bg-gray-100 rounded">
               <ChevronLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <h1 className="text-base font-semibold text-[#0D1B3E] font-[family-name:var(--font-heading)]">
-              19–25 May 2025
-            </h1>
-            <button className="p-1 hover:bg-gray-100 rounded">
+            <button onClick={() => setShowPeriodPicker(!showPeriodPicker)} className="text-center">
+              <h1 className="text-sm font-semibold text-[#0D1B3E]">{weekRanges[period]}</h1>
+              <p className="text-[10px] text-gray-400">{periodLabels[period]}</p>
+            </button>
+            <button onClick={() => {
+              const order: PeriodType[] = ["prev-month","prev-week","current","next-week","next-month","overall"]
+              const idx = order.indexOf(period); if (idx < order.length - 1) setPeriod(order[idx + 1])
+            }} className="p-1 hover:bg-gray-100 rounded">
               <ChevronRight className="w-5 h-5 text-gray-600" />
             </button>
+            {showPeriodPicker && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden min-w-[140px]">
+                {(["prev-month","prev-week","current","next-week","next-month","overall"] as PeriodType[]).map(p => (
+                  <button key={p} onClick={() => { setPeriod(p); setShowPeriodPicker(false) }}
+                    className={cn("w-full px-4 py-2.5 text-left text-xs whitespace-nowrap", period === p ? "bg-[#1A3872] text-white" : "hover:bg-gray-50 text-gray-700")}>
+                    {periodLabels[p]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

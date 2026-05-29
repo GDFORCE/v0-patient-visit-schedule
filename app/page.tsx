@@ -44,6 +44,13 @@ import { InvitePatientScreen } from "@/components/clinical/screens/invite-patien
 import { SessionTimeoutScreen } from "@/components/clinical/screens/session-timeout-screen"
 import { NoInternetScreen } from "@/components/clinical/screens/no-internet-screen"
 import { CalendarWeekScreen } from "@/components/clinical/screens/calendar-week-screen"
+import { PatientCalendarScreen } from "@/components/clinical/screens/patient-calendar-screen"
+import { CalendarSettingsScreen } from "@/components/clinical/screens/calendar-settings-screen"
+import { MyTrialScreen } from "@/components/clinical/screens/patient/my-trial-screen"
+import { PIDashboard } from "@/components/clinical/screens/pi-dashboard"
+import { ResearchTeamDashboard } from "@/components/clinical/screens/research-team-dashboard"
+import { TeamScreen } from "@/components/clinical/screens/team-screen"
+import { ShareScheduleFlow } from "@/components/clinical/screens/share-schedule-flow"
 import { cn } from "@/lib/utils"
 
 type Screen =
@@ -90,6 +97,13 @@ type Screen =
   | "invite-patient"
   | "session-timeout"
   | "no-internet"
+  | "patient-calendar"
+  | "calendar-settings"
+  | "my-trial"
+  | "pi-dashboard"
+  | "research-team-dashboard"
+  | "team"
+  | "share-schedule"
 
 const screenCategories = [
   {
@@ -109,7 +123,9 @@ const screenCategories = [
     name: "Dashboards",
     screens: [
       { id: "sponsor-dashboard", label: "Sponsor/CRO" },
-      { id: "investigator-dashboard", label: "Investigator" },
+      { id: "pi-dashboard", label: "PI Oversight" },
+      { id: "research-team-dashboard", label: "Research Team (CRC)" },
+      { id: "investigator-dashboard", label: "Investigator (Legacy)" },
       { id: "patient-dashboard", label: "Patient" },
       { id: "admin-dashboard", label: "Platform Admin" },
     ],
@@ -136,7 +152,10 @@ const screenCategories = [
   {
     name: "Patient Modules",
     screens: [
+      { id: "my-trial", label: "My Trial (Hub)" },
       { id: "my-visits", label: "My Visits" },
+      { id: "patient-calendar", label: "Patient Calendar" },
+      { id: "calendar-settings", label: "Calendar Settings" },
       { id: "medication-reminder", label: "Medication Reminder" },
       { id: "chat", label: "Chat" },
       { id: "about-trial", label: "About Trial" },
@@ -158,6 +177,13 @@ const screenCategories = [
       { id: "admin-reports", label: "Reports" },
       { id: "admin-master-data", label: "Master Data" },
       { id: "admin-emergency", label: "Emergency Access" },
+    ],
+  },
+  {
+    name: "Collaboration",
+    screens: [
+      { id: "team", label: "Team Management" },
+      { id: "chat", label: "Chat / Messages" },
     ],
   },
   {
@@ -225,6 +251,7 @@ export default function PatientVisitScheduleApp() {
           <RegistrationScreen
             onSubmit={() => navigate("otp")}
             onBack={goBack}
+            entityType={selectedEntity}
           />
         )
       case "otp":
@@ -273,6 +300,10 @@ export default function PatientVisitScheduleApp() {
         )
       case "sponsor-dashboard":
         return <SponsorDashboard onNavigate={(screen) => navigate(screen as Screen)} />
+      case "pi-dashboard":
+        return <PIDashboard onNavigate={(screen) => navigate(screen as Screen)} />
+      case "research-team-dashboard":
+        return <ResearchTeamDashboard onNavigate={(screen) => navigate(screen as Screen)} />
       case "investigator-dashboard":
         return <InvestigatorDashboard onNavigate={(screen) => navigate(screen as Screen)} />
       case "patient-dashboard":
@@ -359,6 +390,15 @@ export default function PatientVisitScheduleApp() {
         return (
           <ChatScreen
             onBack={goBack}
+            userRole={
+              selectedEntity === "patient" ? "patient" :
+              selectedEntity === "cro"     ? "cro" :
+              selectedEntity === "site"    ? "pi" :
+              selectedEntity === "smo"     ? "research-team" :
+              currentScreen === "chat" && history.includes("research-team-dashboard") ? "research-team" :
+              currentScreen === "chat" && history.includes("pi-dashboard") ? "pi" :
+              "sponsor"
+            }
           />
         )
       case "medication-reminder":
@@ -466,6 +506,38 @@ export default function PatientVisitScheduleApp() {
             onRetry={() => navigate("welcome")}
           />
         )
+      case "team":
+        return (
+          <TeamScreen
+            onBack={goBack}
+          />
+        )
+      case "share-schedule":
+        return (
+          <ShareScheduleFlow
+            onBack={goBack}
+            onSuccess={() => navigate("sponsor-dashboard")}
+          />
+        )
+      case "patient-calendar":
+        return (
+          <PatientCalendarScreen
+            onNavigate={(screen) => navigate(screen as Screen)}
+            onBack={goBack}
+          />
+        )
+      case "calendar-settings":
+        return (
+          <CalendarSettingsScreen
+            onBack={goBack}
+          />
+        )
+      case "my-trial":
+        return (
+          <MyTrialScreen
+            onNavigate={(screen) => navigate(screen as Screen)}
+          />
+        )
       default:
         return null
     }
@@ -536,11 +608,29 @@ export default function PatientVisitScheduleApp() {
               <button
                 onClick={() => {
                   setSelectedEntity("site")
-                  navigate("investigator-dashboard")
+                  navigate("pi-dashboard")
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-teal-50 text-[#0D9488] hover:bg-teal-100"
               >
-                Login as Investigator
+                Login as PI (Oversight)
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedEntity("site")
+                  navigate("research-team-dashboard")
+                }}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              >
+                Login as CRC / Research Team
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedEntity("site")
+                  navigate("investigator-dashboard")
+                }}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-slate-50 text-slate-600 hover:bg-slate-100"
+              >
+                Login as Investigator (Legacy)
               </button>
               <button
                 onClick={() => {
@@ -562,6 +652,18 @@ export default function PatientVisitScheduleApp() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                 Patient Features
               </p>
+              <button
+                onClick={() => navigate("my-trial")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-teal-50 text-teal-700 hover:bg-teal-100"
+              >
+                My Trial Hub
+              </button>
+              <button
+                onClick={() => navigate("patient-calendar")}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm bg-blue-50 text-blue-700 hover:bg-blue-100"
+              >
+                Patient Calendar
+              </button>
               <button
                 onClick={() => navigate("my-visits")}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
