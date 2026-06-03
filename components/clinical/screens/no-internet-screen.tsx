@@ -24,7 +24,7 @@ export function NoInternetScreen({ onRetry }: NoInternetScreenProps) {
 
       <Button
         onClick={onRetry}
-        className="w-full h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium"
+        className="w-full h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium"
       >
         <RefreshCw className="w-4 h-4 mr-2" />
         Retry

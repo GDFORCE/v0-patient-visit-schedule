@@ -1,9 +1,10 @@
 "use client"
 
 import { AppBar } from "../app-bar"
-import { Building2, FlaskConical, Building, Hotel, User, Check, Info } from "lucide-react"
+import { Building2, FlaskConical, Building, Hotel, User, Check } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n"
 
 interface RegistrationScreenProps {
   onSubmit: () => void
@@ -77,31 +78,36 @@ function SponsorForm({ entityType }: { entityType?: string | null }) {
   )
 }
 
-// ── Site / SMO form ──────────────────────────────────────
-function SiteForm({ entityType }: { entityType?: string | null }) {
+// ── Site / Hospital form ──────────────────────────────────
+function SiteForm() {
   const [role, setRole] = useState<"PI" | "Research Team">("PI")
-  const [sites, setSites] = useState([{ name: "", address: "" }])
-
-  const addSite = () => setSites(prev => [...prev, { name: "", address: "" }])
-  const removeSite = (i: number) => setSites(prev => prev.filter((_, idx) => idx !== i))
 
   return (
     <div className="space-y-4">
-      {/* Personal Details */}
+      {/* 1. Full Name */}
       <Field label="Full Name" required><Input defaultValue="Dr. Rajesh Kumar" /></Field>
+      {/* 2. Designation */}
       <Field label="Designation" required><Input defaultValue="Principal Investigator" /></Field>
-      <Field label="Work Email" required><Input type="email" defaultValue="r.kumar@apollo.com" /></Field>
+      {/* 3. Email ID (Work Email) */}
+      <Field label="Email ID" required><Input type="email" defaultValue="r.kumar@apollo.com" /></Field>
+      {/* 4. Phone No. */}
       <Field label="Phone Number" required><PhoneInput defaultValue="98100 12345" /></Field>
 
-      {/* Entity Type — auto-populated chip shown in parent, but display read-only here */}
+      {/* 5. Entity Type — not bold */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
         <span className="text-sm text-slate-500">Entity Type</span>
-        <span className="text-sm font-semibold text-[#0D1B3E]">
-          {entityType === "smo" ? "SMO" : "Site / Hospital"}
-        </span>
+        <span className="text-sm text-[#0D1B3E]">Site / Hospital</span>
       </div>
 
-      {/* Role: PI / Research Team */}
+      {/* 6. Org. Name */}
+      <Field label="Organization Name" required><Input defaultValue="Apollo Hospitals Mumbai" /></Field>
+      {/* 7. Org. Address */}
+      <Field label="Organization Address" required>
+        <textarea rows={2} placeholder="Building / Street, City, State, PIN"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 resize-none" />
+      </Field>
+
+      {/* 8. Role: PI / Research Team */}
       <Field label="Role" required>
         <div className="flex rounded-xl border border-gray-200 overflow-hidden">
           {(["PI", "Research Team"] as const).map(r => (
@@ -116,111 +122,113 @@ function SiteForm({ entityType }: { entityType?: string | null }) {
         </div>
       </Field>
 
-      {/* Department — only when PI */}
+      {/* 9. Department — only when PI */}
       {role === "PI" && (
         <Field label="Department">
           <Input placeholder="e.g. Oncology, Cardiology" />
         </Field>
       )}
+    </div>
+  )
+}
 
-      {/* Medical Registration */}
-      <Field label="Medical Registration No. (MCI/NMC)"><Input placeholder="MCI-XXXXXXXX" /></Field>
+// ── SMO form ──────────────────────────────────────────────
+function SMOForm() {
+  const [hospitals, setHospitals] = useState([{ name: "", address: "", role: "PI" as "PI" | "Research Team" }])
 
-      {/* Organization */}
-      <SectionHeader title="Organization" />
-      <Field label="Organization Name" required><Input defaultValue="Apollo Hospitals Mumbai" /></Field>
-      <Field label="Organization Address" required><Input placeholder="Building / Street" /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="City" required><Input defaultValue="Mumbai" /></Field>
-        <Field label="State" required><Input defaultValue="Maharashtra" /></Field>
+  const addHospital = () =>
+    setHospitals(prev => [...prev, { name: "", address: "", role: "PI" }])
+  const removeHospital = (i: number) =>
+    setHospitals(prev => prev.filter((_, idx) => idx !== i))
+  const setHospitalRole = (i: number, role: "PI" | "Research Team") =>
+    setHospitals(prev => prev.map((h, idx) => (idx === i ? { ...h, role } : h)))
+
+  return (
+    <div className="space-y-4">
+      {/* 1. Full Name */}
+      <Field label="Full Name" required><Input defaultValue="Dr. Rajesh Kumar" /></Field>
+      {/* 2. Designation */}
+      <Field label="Designation" required><Input defaultValue="SMO Manager" /></Field>
+      {/* 3. Email ID (Work Email) */}
+      <Field label="Email ID" required><Input type="email" defaultValue="r.kumar@smo.com" /></Field>
+      {/* 4. Phone No. */}
+      <Field label="Phone Number" required><PhoneInput defaultValue="98100 12345" /></Field>
+
+      {/* 5. Entity Type — not bold */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
+        <span className="text-sm text-slate-500">Entity Type</span>
+        <span className="text-sm text-[#0D1B3E]">SMO</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="PIN Code"><Input placeholder="400001" /></Field>
-        <Field label="Country"><Input defaultValue="India" /></Field>
-      </div>
 
-      {/* Add Sites — SMO only */}
-      {entityType === "smo" && (
-        <>
-          <SectionHeader title="Sites Under SMO" />
-          <p className="text-xs text-slate-500">Add the hospital / site locations managed by this SMO.</p>
-          {sites.map((site, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-slate-500">Site {i + 1}</span>
-                {sites.length > 1 && (
-                  <button onClick={() => removeSite(i)} className="text-red-400 text-xs font-medium">Remove</button>
-                )}
-              </div>
-              <input
-                placeholder="Site / Hospital Name *"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A3872]"
-                defaultValue={i === 0 ? "Apollo Hospitals Mumbai" : ""}
-              />
-              <input
-                placeholder="Site Address"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A3872]"
-                defaultValue={i === 0 ? "Jubilee Hills, Hyderabad" : ""}
-              />
-            </div>
-          ))}
-          <button onClick={addSite}
-            className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 font-medium hover:border-[#1A3872] hover:text-[#1A3872] transition-colors">
-            + Add Another Site
-          </button>
-        </>
-      )}
-
-      {/* Trial Assignment */}
-      <SectionHeader title="Trial Assignment" />
-      <Field label="Assign to Trial(s)">
-        <div className="space-y-2 mt-1">
-          {[
-            { id: "P001", label: "Protocol-001 Diabetes Phase II", checked: true },
-            { id: "P002", label: "Protocol-002 Hypertension Study", checked: true },
-            { id: "P003", label: "Protocol-003 Oncology Trial", checked: false },
-          ].map(t => (
-            <label key={t.id} className="flex items-center gap-3">
-              <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center", t.checked ? "border-[#0D9488] bg-[#0D9488]" : "border-slate-300 bg-white")}>
-                {t.checked && <Check className="w-3 h-3 text-white" />}
-              </div>
-              <span className="text-sm text-[#0F172A]">{t.label}</span>
-            </label>
-          ))}
-        </div>
+      {/* 6. SMO Name */}
+      <Field label="SMO Name" required><Input defaultValue="MedSites SMO Pvt Ltd" /></Field>
+      {/* 7. SMO Address */}
+      <Field label="SMO Address" required>
+        <textarea rows={2} placeholder="Building / Street, City, State, PIN"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 resize-none" />
       </Field>
-      <Field label="Max Enrollment Target"><Input placeholder="100" /></Field>
+
+      {/* 8. Add Hospital (Name; Address, Role: PI / Research Team) */}
+      <SectionHeader title="Hospitals" />
+      <p className="text-xs text-slate-500">Add the hospital / site locations managed by this SMO.</p>
+      {hospitals.map((h, i) => (
+        <div key={i} className="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-500">Hospital {i + 1}</span>
+            {hospitals.length > 1 && (
+              <button onClick={() => removeHospital(i)} className="text-red-400 text-xs font-medium">Remove</button>
+            )}
+          </div>
+          <input
+            placeholder="Hospital Name *"
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A3872]"
+            defaultValue={i === 0 ? "Apollo Hospitals Mumbai" : ""}
+          />
+          <input
+            placeholder="Hospital Address"
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A3872]"
+            defaultValue={i === 0 ? "Bandra West, Mumbai" : ""}
+          />
+          {/* Role: PI / Research Team */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Role</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              {(["PI", "Research Team"] as const).map(r => (
+                <button
+                  key={r}
+                  onClick={() => setHospitalRole(i, r)}
+                  className={cn("flex-1 py-2 text-sm font-medium", h.role === r ? "bg-[#1A3872] text-white" : "bg-white text-gray-600")}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={addHospital}
+        className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 font-medium hover:border-[#1A3872] hover:text-[#1A3872] transition-colors">
+        + Add Hospital
+      </button>
     </div>
   )
 }
 
 // ── Patient self-registration form ───────────────────────
 function PatientForm() {
+  const { setLang } = useLanguage()
   return (
     <div className="space-y-4">
-      <SectionHeader title="Personal Information" />
-
+      {/* 1. Full Name */}
       <Field label="Full Name" required><Input defaultValue="Priya Kapoor" /></Field>
-
-      {/* Entity Type — auto-populated */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
-        <span className="text-sm text-slate-500">Entity Type</span>
-        <span className="text-sm font-semibold text-[#0D1B3E]">Patient</span>
-      </div>
-
+      {/* 2. Phone No. */}
       <Field label="Phone Number" required><PhoneInput defaultValue="98765 43210" /></Field>
+      {/* 3. Email ID */}
       <Field label="Email ID" required><Input type="email" placeholder="patient@example.com" /></Field>
 
-      <Field label="Gender" required>
-        <select className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1A3872] bg-white">
-          <option value="">Select gender</option>
-          <option>Female</option>
-          <option>Male</option>
-          <option>Other</option>
-          <option>Prefer not to say</option>
-        </select>
-      </Field>
+      {/* 4. Entity Type — not required for patient (omitted) */}
 
+      {/* 5. DOB / Age */}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Date of Birth" required>
           <Input type="date" defaultValue="1985-06-15" />
@@ -232,8 +240,22 @@ function PatientForm() {
         </Field>
       </div>
 
-      <Field label="Preferred Language">
+      {/* 6. Gender */}
+      <Field label="Gender" required>
         <select className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1A3872] bg-white">
+          <option value="">Select gender</option>
+          <option>Female</option>
+          <option>Male</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
+      </Field>
+
+      {/* 7. Preferred Language */}
+      <Field label="Preferred Language">
+        <select
+          onChange={(e) => setLang(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1A3872] bg-white">
           <option>English</option>
           <option>Hindi</option>
           <option>Tamil</option>
@@ -242,12 +264,6 @@ function PatientForm() {
           <option>Marathi</option>
         </select>
       </Field>
-
-      {/* Info note */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-2">
-        <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-700">Your trial assignment and visit schedule will be set up by your site coordinator after verification.</p>
-      </div>
     </div>
   )
 }
@@ -282,9 +298,10 @@ export function RegistrationScreen({ onSubmit, onBack, entityType }: Registratio
 
   const renderForm = () => {
     switch (entityType) {
-      case "site":
       case "smo":
-        return <SiteForm entityType={entityType} />
+        return <SMOForm />
+      case "site":
+        return <SiteForm />
       case "patient":
         return <PatientForm />
       case "sponsor":
@@ -339,7 +356,7 @@ export function RegistrationScreen({ onSubmit, onBack, entityType }: Registratio
           onClick={onSubmit}
           className={cn("w-full py-3.5 rounded-xl font-semibold text-sm transition-all", agreedToTerms ? "bg-[#0D1B3E] text-white" : "bg-slate-200 text-slate-400")}
         >
-          {entityType === "patient" ? "Add Patient →" : "Continue →"}
+          Continue →
         </button>
       </div>
 

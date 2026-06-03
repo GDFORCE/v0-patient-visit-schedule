@@ -10,7 +10,9 @@ interface AppBarProps {
   onBack?: () => void
   rightContent?: React.ReactNode
   notificationCount?: number
+  onNotificationClick?: () => void
   avatar?: string
+  onAvatarClick?: () => void
   className?: string
 }
 
@@ -21,40 +23,76 @@ export function AppBar({
   onBack,
   rightContent,
   notificationCount,
+  onNotificationClick,
   avatar,
+  onAvatarClick,
   className,
 }: AppBarProps) {
   return (
-    <div className={cn("flex items-center justify-between px-4 py-3 bg-[#0D1B3E] text-white", className)}>
-      <div className="flex items-center gap-3">
+    <header
+      className={cn(
+        "flex items-center justify-between gap-3 bg-primary text-primary-foreground px-4 py-3",
+        className,
+      )}
+    >
+      <div className="flex items-center gap-3 min-w-0">
         {showBack && (
-          <button onClick={onBack} className="p-1">
-            <ChevronLeft className="w-6 h-6" />
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="-ml-1 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-primary-foreground/10"
+          >
+            <ChevronLeft className="h-5 w-5" />
           </button>
         )}
-        <div>
-          <h1 className="font-semibold text-lg">{title}</h1>
-          {subtitle && <p className="text-sm text-blue-300">{subtitle}</p>}
+        <div className="min-w-0">
+          <h1 className="font-heading text-base font-semibold leading-tight truncate">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs text-primary-foreground/70 leading-tight truncate">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+
+      <div className="flex items-center gap-2 shrink-0">
         {rightContent}
         {notificationCount !== undefined && (
-          <div className="relative">
-            <Bell className="w-6 h-6" />
+          <button
+            type="button"
+            onClick={onNotificationClick}
+            aria-label={
+              notificationCount > 0
+                ? `Notifications, ${notificationCount} unread`
+                : "Notifications"
+            }
+            className="relative flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-primary-foreground/10"
+          >
+            <Bell className="h-5 w-5" />
             {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                {notificationCount}
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white"
+              >
+                {notificationCount > 9 ? "9+" : notificationCount}
               </span>
             )}
-          </div>
+          </button>
         )}
         {avatar && (
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-semibold">
+          <button
+            type="button"
+            onClick={onAvatarClick}
+            aria-label="Account"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/15 text-xs font-semibold transition-colors hover:bg-primary-foreground/25"
+          >
             {avatar}
-          </div>
+          </button>
         )}
       </div>
-    </div>
+    </header>
   )
 }

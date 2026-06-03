@@ -5,6 +5,7 @@ import { BottomNav } from "../bottom-nav"
 import { ChevronRight, Check, Pill, Clock, CheckCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n"
 
 interface PatientDashboardProps {
   onNavigate: (screen: string) => void
@@ -20,6 +21,7 @@ interface Medication {
 }
 
 export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState("dashboard")
   const [medications, setMedications] = useState<Medication[]>([
     { id: "med1", name: "Metformin", dosage: "500mg", time: "8:00 AM", status: "pending" },
@@ -78,7 +80,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC]">
       <AppBar
-        title="My Trial Journey"
+        title={t("myTrialJourney")}
         notificationCount={2}
         avatar="PK"
         onNotificationClick={() => onNavigate("notifications")}
@@ -89,11 +91,11 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
         {/* Hero Card */}
         <div className="px-4 py-4">
           <div className="bg-gradient-to-br from-[#0D1B3E] via-[#1A3872] to-[#2563EB] rounded-2xl p-5 text-white shadow-lg">
-            <h2 className="text-xl font-bold mb-1 font-[family-name:var(--font-heading)]">Hello, Priya</h2>
+            <h2 className="text-xl font-bold mb-1 font-[family-name:var(--font-heading)]">{t("hello")} Priya</h2>
             <p className="text-blue-200 text-sm mb-4">Protocol-001 · Dr. Sharma</p>
-            
+
             <div className="mb-2">
-              <span className="text-sm text-blue-200">Your Progress</span>
+              <span className="text-sm text-blue-200">{t("yourProgress")}</span>
             </div>
             <div className="h-3 bg-white/20 rounded-full overflow-hidden mb-2">
               <div
@@ -101,28 +103,28 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                 style={{ width: "60%" }}
               />
             </div>
-            <span className="text-sm text-blue-200">Visit 6 of 10 completed</span>
+            <span className="text-sm text-blue-200">{t("visitOfCompleted", { a: 6, b: 10 })}</span>
           </div>
         </div>
         
         {/* Next Visit Card */}
         <div className="px-4 mb-4">
-          <h3 className="font-semibold text-[#0F172A] mb-3 font-[family-name:var(--font-heading)]">Next Visit</h3>
+          <h3 className="font-semibold text-[#0F172A] mb-3 font-[family-name:var(--font-heading)]">{t("nextVisit")}</h3>
           <div className="bg-white rounded-2xl border-l-4 border-[#2563EB] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-[#0F172A]">Visit 7</span>
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                Upcoming
+                {t("upcoming")}
               </span>
             </div>
-            <p className="text-sm text-[#64748B] mb-1">Follow-Up Visit</p>
+            <p className="text-sm text-[#64748B] mb-1">{t("followUpVisit")}</p>
             <p className="text-sm text-[#0D1B3E] font-medium mb-1">23 May 2025</p>
-            <p className="text-xs text-[#94A3B8] mb-3">Window: 20 May – 26 May</p>
-            <button 
+            <p className="text-xs text-[#94A3B8] mb-3">{t("window")} 20 May – 26 May</p>
+            <button
               onClick={() => onNavigate("my-visits")}
               className="text-[#2563EB] font-medium text-sm flex items-center gap-1 hover:underline"
             >
-              View Details <ChevronRight className="w-4 h-4" />
+              {t("viewDetails")} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -132,14 +134,14 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Pill className="w-5 h-5 text-[#0D1B3E]" />
-              <h3 className="font-semibold text-[#0F172A] font-[family-name:var(--font-heading)]">Medication</h3>
+              <h3 className="font-semibold text-[#0F172A] font-[family-name:var(--font-heading)]">{t("medication")}</h3>
             </div>
             {!allDone && (
-              <span className="text-sm text-[#64748B]">{takenCount}/{totalCount} taken</span>
+              <span className="text-sm text-[#64748B]">{takenCount}/{totalCount} {t("taken")}</span>
             )}
             {allDone && (
               <span className="text-sm text-[#0D9488] font-medium flex items-center gap-1">
-                All done <Check className="w-4 h-4" />
+                {t("allDone")} <Check className="w-4 h-4" />
               </span>
             )}
           </div>
@@ -151,9 +153,9 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                 <div className="w-10 h-10 bg-[#D1FAE5] rounded-full flex items-center justify-center mb-3">
                   <CheckCircle className="w-6 h-6 text-[#0D9488]" />
                 </div>
-                <p className="font-semibold text-[#0F172A] mb-1">All done for today!</p>
-                <p className="text-sm text-[#64748B]">No more medications required</p>
-                <p className="text-sm text-[#64748B]">Great job keeping up with your schedule</p>
+                <p className="font-semibold text-[#0F172A] mb-1">{t("allDoneToday")}</p>
+                <p className="text-sm text-[#64748B]">{t("noMoreMeds")}</p>
+                <p className="text-sm text-[#64748B]">{t("greatJob")}</p>
               </div>
             </div>
           )}
@@ -164,8 +166,8 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
               <div className="flex items-center gap-3">
                 <Pill className="w-5 h-5 text-slate-400" />
                 <div>
-                  <p className="font-medium text-slate-500">No medications today</p>
-                  <p className="text-sm text-slate-400">Enjoy your medication-free day!</p>
+                  <p className="font-medium text-slate-500">{t("noMedsToday")}</p>
+                  <p className="text-sm text-slate-400">{t("medFreeDay")}</p>
                 </div>
               </div>
             </div>
@@ -209,7 +211,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                         </p>
                         {med.status === "animating" && med.takenAt && (
                           <p className="text-xs text-[#16A34A] mt-1 animate-fade-in">
-                            ✓ Logged at {med.takenAt}
+                            ✓ {t("loggedAt")} {med.takenAt}
                           </p>
                         )}
                       </div>
@@ -220,7 +222,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                           onClick={() => handleUndo(med.id)}
                           className="text-[13px] text-[#2563EB] font-medium hover:underline"
                         >
-                          Undo
+                          {t("undo")}
                         </button>
                       )}
                       <button
@@ -242,7 +244,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                         </div>
                         {med.status === "pending" && (
                           <span className="text-[13px] text-[#64748B] leading-tight">
-                            Confirm<br />taken
+                            {t("confirmTaken")}
                           </span>
                         )}
                       </button>
@@ -256,7 +258,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
         
         {/* Recent Activity */}
         <div className="px-4">
-          <h3 className="font-semibold text-[#0F172A] mb-3 font-[family-name:var(--font-heading)]">Recent Activity</h3>
+          <h3 className="font-semibold text-[#0F172A] mb-3 font-[family-name:var(--font-heading)]">{t("recentActivity")}</h3>
           <div className="bg-white rounded-2xl divide-y divide-slate-100 shadow-sm">
             {recentActivity.map((activity) => (
               <div key={activity.visit} className="p-4 flex items-center justify-between">
@@ -270,7 +272,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
                   </div>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                  {activity.status}
+                  {activity.status === "Done" ? t("done") : activity.status}
                 </span>
               </div>
             ))}

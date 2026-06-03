@@ -231,7 +231,7 @@ export function NotificationScreen({ onNavigate, onBack }: NotificationScreenPro
             >
               <div className="flex items-start pt-0.5">
                 {bulkMode ? (
-                  <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center mr-2 flex-shrink-0", isSelected ? "border-[#1D4ED8] bg-[#1D4ED8]" : "border-slate-300 bg-white")}>
+                  <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center mr-2 flex-shrink-0", isSelected ? "border-[#1A3872] bg-[#1A3872]" : "border-slate-300 bg-white")}>
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
                 ) : (
@@ -277,7 +277,7 @@ export function NotificationScreen({ onNavigate, onBack }: NotificationScreenPro
           <button key={f.id} onClick={() => setActiveFilter(f.id)}
             className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-sm border",
               activeFilter === f.id
-                ? "bg-[#EFF6FF] border-[#1D4ED8] text-[#1D4ED8] font-bold"
+                ? "bg-[#FFF7ED] border-[#1A3872] text-[#1A3872] font-bold"
                 : "bg-white border-[#E2E8F0] text-[#64748B] font-medium"
             )}>
             {f.label}

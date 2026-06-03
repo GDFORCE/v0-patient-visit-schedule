@@ -121,7 +121,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           <Button
             onClick={handleSendResetLink}
             disabled={!emailOrPhone}
-            className="w-full mt-8 h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium"
+            className="w-full mt-8 h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium"
           >
             Send Reset Link
           </Button>
@@ -170,7 +170,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           <Button
             onClick={handleVerifyOtp}
             disabled={otp.some((d) => !d)}
-            className="w-full h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium"
+            className="w-full h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium"
           >
             Verify OTP
           </Button>
@@ -277,7 +277,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           <Button
             onClick={handleResetPassword}
             disabled={metRulesCount < 5 || !passwordsMatch}
-            className="w-full mt-8 h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium disabled:bg-gray-300"
+            className="w-full mt-8 h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium disabled:bg-gray-300"
           >
             Reset Password
           </Button>
@@ -298,7 +298,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           </p>
           <Button
             onClick={handleBackToSignIn}
-            className="w-full h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium"
+            className="w-full h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium"
           >
             Back to Sign In
           </Button>

@@ -1,0 +1,4484 @@
+-> verify the pi tool by adding the claude api key 
+
+-> due to credits limit we have created the repsoity of our code so onces done open that repornsty in claude code and update the code by giving this prompt 
+
+# V0.DEV PROMPT — Patient Dashboard & Calendar Fixes
+## 3 Major Changes: Medication Tick Flow + Patient-Only Calendar + Weekly View + Settings Icon
+
+---
+
+## CHANGE 1 — MEDICATION "CONFIRM TAKEN" TICK BEHAVIOR
+### (Dashboard → Medication section)
+
+---
+
+### CURRENT PROBLEM
+The medication card on the Patient Dashboard shows a plain checkbox "Confirm taken" that does nothing visually meaningful when clicked.
+
+### REQUIRED BEHAVIOR
+Make it work **exactly like a to-do/task app** — when the patient ticks the checkbox, the medication animates out and the list updates dynamically.
+
+---
+
+### MEDICATION CARD — DEFAULT STATE
+
+```
+┌─────────────────────────────────────────┐
+│  💊  Metformin 500mg        ☐ Confirm   │
+│      🕐 8:00 AM               taken     │
+└─────────────────────────────────────────┘
+```
+
+- Pill icon in teal circle (left)
+- Drug name: 15px bold `#0F172A`
+- Time: 13px `#64748B` with clock icon
+- Checkbox (right): 22×22px, unchecked = white bg + `#CBD5E1` border
+
+---
+
+### WHEN PATIENT TAPS THE CHECKBOX — ANIMATION SEQUENCE
+
+**Step 1 (0ms):** Checkbox fills instantly with teal `#0D9488` + white checkmark appears
+
+**Step 2 (200ms):** Card background transitions to `#F0FDF4` (green-50)
+
+**Step 3 (300ms):** Strikethrough line animates across the drug name (left to right, 300ms)
+
+**Step 4 (600ms):** Small "✓ Logged at 8:03 AM" timestamp fades in below the drug name (green text, 12px)
+
+**Step 5 (1200ms):** Card smoothly slides up and collapses out of view (height: auto → 0, opacity: 1 → 0, 400ms ease-in)
+
+**Step 6:** Next pending medication slides up to fill the space (if any remaining)
+
+---
+
+### AFTER TICK — DYNAMIC STATES
+
+#### State A: More medications remaining
+Show the next pending medication card immediately after the completed one collapses:
+
+```
+Medication                          2/3 taken
+─────────────────────────────────────────────
+💊  Aspirin 75mg            ☐ Confirm taken
+    🕐 2:00 PM
+```
+- Progress counter updates: "1/3 taken" → "2/3 taken"
+- Counter shown as small gray text right-aligned on the section header
+
+#### State B: All medications taken for the day
+When the LAST medication is ticked and collapses, replace the medication section with:
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│   ✅  (large teal checkmark, 32px)      │
+│                                         │
+│   All done for today!                   │  ← 15px bold #0F172A
+│   No more medications required          │  ← 13px #64748B
+│   Great job keeping up with your        │
+│   schedule 💪                           │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+- Card: white bg, `#0D9488` left border (4px), rounded-xl, 16px padding
+- Teal checkmark circle (40px): `#D1FAE5` bg + `#0D9488` check icon
+- This state persists for the rest of the day
+- Next day: resets to show tomorrow's medications as pending
+
+#### State C: No medications scheduled today
+If the patient has no medications at all for today:
+
+```
+┌─────────────────────────────────────────┐
+│   💊  No medications today              │
+│       Enjoy your medication-free day!   │
+└─────────────────────────────────────────┘
+```
+- Gray pill icon + gray text
+- Subtle gray border card
+
+---
+
+### UNDO FUNCTIONALITY
+After ticking (before card collapses, during the 1200ms animation):
+- A small **"Undo"** text link appears bottom-right of the card (blue, 13px)
+- Tapping Undo within this window reverses the animation and unchecks
+
+After card collapses: no undo available (medication is logged)
+
+---
+
+### MEDICATION SECTION HEADER UPDATE
+```
+Medication                    [1/3 taken]
+```
+- Section title "Medication" (left, 16px bold)
+- Progress fraction right-aligned: "1/3 taken" → updates live → "All done ✓" when complete
+- "All done ✓" shown in teal when all complete
+
+---
+
+## CHANGE 2 — PATIENT CALENDAR (Patient-Only View)
+### CRITICAL CHANGE: Patient sees ONLY their own visits
+
+---
+
+### CURRENT PROBLEM
+The calendar currently shows **all patients' visits** (SUBJ-001, SUBJ-007, etc.) — this is the **PI/Investigator view**. A logged-in patient must NEVER see other patients' data.
+
+### RULE
+```
+If logged-in user role = PATIENT
+  → Calendar shows ONLY that patient's own trial visits
+  → No Subject IDs shown (it's always "you")
+  → No other patients visible anywhere in this screen
+```
+
+---
+
+### PATIENT CALENDAR — APP BAR
+
+```
+←    📅 May 2025    [🔄] [⚙️]
+```
+
+- Back arrow (left) → Patient Dashboard
+- "📅 May 2025" centered with left/right arrow chevrons to navigate months
+- 🔄 Sync icon (right) — tapping refreshes calendar data, shows brief spinner
+- ⚙️ Settings icon (right) — tapping → Calendar Settings screen (see Change 4 below)
+
+**Both icons must be functional (not decorative)**
+
+---
+
+### PATIENT CALENDAR — VIEW MODE TABS
+
+```
+[ Day ]  [ Week ]  [ Month ]
+```
+
+- Pill-style tabs, full set of 3
+- Active tab: `#0D1B3E` bg, white text
+- Inactive: white bg, `#0D1B3E` border + text
+- All 3 MUST work (see Change 3 for Week fix)
+
+---
+
+### PATIENT CALENDAR — MONTH VIEW (default)
+
+#### Calendar Grid
+- Standard 7-column month grid (S M T W T F S)
+- Today: light blue circle bg
+- Selected date: solid `#0D1B3E` circle, white date number
+- Date cells with patient's visits: show colored dot below the number
+  - Blue dot = Scheduled visit
+  - Teal dot = Completed visit
+  - Red dot = Missed/overdue visit
+  - Amber dot = Upcoming (within 3 days)
+- Dates with NO visits: no dot, just the number
+
+#### Selected Day Visit Cards (below calendar grid)
+
+**Header:** "Monday, 19 May" (bold, 16px)
+
+**Visit Card (patient view — NO subject ID):**
+```
+┌─────────────────────────────────────────┐
+│ │  10:00 AM              [Scheduled]    │
+│ │  Follow-Up Visit · Visit 7            │
+│ │  🏥 AIIMS Delhi, OPD Block 3          │
+│ │  Dr. Sharma                           │
+│ │                    [View Details →]   │
+└─────────────────────────────────────────┘
+```
+
+- Left colored border: blue=Scheduled, teal=Completed, red=Missed, amber=Upcoming
+- Time (bold, 14px)
+- Visit name + number (15px `#0F172A`)
+- Hospital icon + location (13px gray)
+- Doctor name (13px gray)
+- **[View Details →]** blue text link → Visit Detail screen
+- **NO Subject ID shown** (it's always the logged-in patient)
+- **NO other patients' visits shown**
+
+**Completed visit card:**
+```
+┌─────────────────────────────────────────┐
+│ │  10:00 AM              [Completed ✓]  │
+│ │  Baseline Visit · Visit 1             │
+│ │  🏥 AIIMS Delhi                       │
+│ │  ✓ Completed on 5 Mar 2025            │
+└─────────────────────────────────────────┘
+```
+
+**Missed visit card:**
+```
+┌─────────────────────────────────────────┐
+│ │  10:00 AM              [Missed ⚠]    │
+│ │  Follow-Up Visit · Visit 4            │
+│ │  🏥 AIIMS Delhi                       │
+│ │  ⚠ Was due on 10 Apr · Contact team  │
+│ │                 [Contact PI →]        │
+└─────────────────────────────────────────┘
+```
+
+**Empty day (no visits scheduled):**
+```
+     📅
+  No visits on this day
+```
+Gray calendar icon + gray text, centered
+
+---
+
+### PATIENT CALENDAR — MOCK DATA (use this, patient Priya's visits only)
+
+| Visit | Date | Status | Type |
+|-------|------|--------|------|
+| Visit 1 - Screening | 3 Mar 2025 | Completed | Hospital |
+| Visit 2 - Baseline | 10 Mar 2025 | Completed | Hospital |
+| Visit 3 - Week 2 | 24 Mar 2025 | Completed | Hospital |
+| Visit 4 - Week 4 | 7 Apr 2025 | Completed | Hospital |
+| Visit 5 - Week 8 | 5 May 2025 | Completed | Hospital |
+| Visit 6 - Week 12 | 19 May 2025 | Completed | Hospital |
+| Visit 7 - Week 14 | 23 May 2025 | Upcoming | Hospital |
+| Visit 8 - Week 16 | 9 Jun 2025 | Scheduled | Hospital |
+| Visit 9 - Week 20 | 7 Jul 2025 | Scheduled | Telephonic |
+| Visit 10 - EOT | 18 Aug 2025 | Scheduled | Hospital |
+
+---
+
+## CHANGE 3 — WEEKLY VIEW (Currently broken — fix it)
+
+---
+
+### CURRENT PROBLEM
+The Week tab exists but shows the same monthly grid instead of a proper 7-day horizontal week view.
+
+### REQUIRED WEEK VIEW LAYOUT
+
+#### App Bar
+Same as month view: `← 📅 19–25 May 2025 [🔄][⚙️]`
+- Date range shows the current week (Mon–Sun)
+- Left/right chevrons navigate to previous/next week
+
+#### Week Header Row (7 columns)
+```
+  S      M      T      W      T      F      S
+ 18     19     20     21     22     23     24
+        [●]                  [●]
+```
+- 7 equal-width columns
+- Day letter (S/M/T/W/T/F/S) — 11px gray above
+- Date number — 15px below
+- Today: blue filled circle behind date number
+- Days with visits: small colored dot below the date number
+- Selected day: navy filled circle
+- Tap any day column header → shows that day's visits below
+
+#### Week Visit List (below the 7-day header)
+
+Shows visits for the SELECTED day (same format as month view cards):
+
+**"Wednesday, 21 May — No visits"** ← if empty day selected
+
+**"Monday, 19 May":**
+```
+┌─────────────────────────────────────────┐
+│ │  10:00 AM              [Completed ✓]  │
+│ │  Week 12 Follow-Up · Visit 6          │
+│ │  🏥 AIIMS Delhi                       │
+│ │  ✓ Completed 19 May 2025              │
+└─────────────────────────────────────────┘
+```
+
+#### Week Overview Strip (optional but great UX)
+Between the 7-day header and the visit cards, show a mini summary row:
+```
+This week: 1 completed · 1 upcoming · 5 free days
+```
+13px gray text, centered
+
+---
+
+## CHANGE 4 — SETTINGS ICON (⚙️) — Must be functional
+
+---
+
+### CURRENT PROBLEM
+The ⚙️ gear icon on the calendar header is visible but tapping it does nothing.
+
+### REQUIRED: Calendar Settings Screen
+
+**Navigation:** Tap ⚙️ icon → opens Calendar Settings as a full screen (NOT a modal)
+
+**App Bar:**
+- Back arrow → returns to Calendar
+- Title: "Calendar Settings"
+
+**Settings Content:**
+
+```
+┌─────────────────────────────────────────┐
+│  DISPLAY                                │
+│                                         │
+│  Default View                           │
+│  ○ Day   ● Month   ○ Week              │  ← radio buttons
+│                                         │
+│  Start Week On                          │
+│  ● Sunday   ○ Monday                   │
+│                                         │
+├─────────────────────────────────────────┤
+│  VISIT REMINDERS                        │
+│                                         │
+│  Show visit reminders              [ON] │  ← toggle
+│                                         │
+│  Reminder timing                        │
+│  ○ 1 day before                         │
+│  ● 2 days before                        │
+│  ○ 3 days before                        │
+│                                         │
+├─────────────────────────────────────────┤
+│  SYNC                                   │
+│                                         │
+│  Sync with device calendar         [ON] │  ← toggle
+│  Last synced: Today at 9:41 AM          │
+│                   [Sync Now]            │  ← outlined blue button
+│                                         │
+│  Export calendar as PDF            [>]  │  ← navigates to export
+│                                         │
+├─────────────────────────────────────────┤
+│  VISIT DISPLAY                          │
+│                                         │
+│  Show visit window dates           [ON] │
+│  Show hospital location            [ON] │
+│  Show doctor name                  [ON] │
+│                                         │
+└─────────────────────────────────────────┘
+
+         [Save Settings]
+```
+
+- Toggles: ON = teal `#0D9488`, OFF = gray `#CBD5E1`
+- Radio buttons: selected = navy filled circle
+- **[Save Settings]** full-width navy button at bottom
+- On save: show green toast "Settings saved" + navigate back to calendar
+
+---
+
+## CHANGE 5 — SYNC ICON (🔄) — Must be functional
+
+### REQUIRED BEHAVIOR
+
+**Default state:** Sync icon static (circular arrows, `#0D1B3E`)
+
+**On tap:**
+1. Icon starts spinning animation (360° rotation, 1s loop, CSS animation)
+2. Small text appears below header: "Syncing..." (13px gray, centered)
+3. After 2 seconds: icon stops spinning
+4. Text changes to: "✓ Updated just now" (13px teal)
+5. Text fades out after 2 more seconds
+
+If sync fails (mock error state):
+- Toast appears: "Sync failed. Check your connection." (red toast, bottom of screen)
+
+---
+
+## SUMMARY OF ALL CHANGES
+
+| # | Component | Change | Where |
+|---|-----------|--------|-------|
+| 1 | Medication checkbox | Task-app style tick → animate out → "All done!" state | Patient Dashboard |
+| 2 | Calendar data | Patient sees ONLY their own visits (not all patients) | Calendar screen |
+| 3 | Weekly view | Build proper 7-column week view (currently broken/missing) | Calendar → Week tab |
+| 4 | Settings icon ⚙️ | Make functional → full Calendar Settings screen | Calendar header |
+| 5 | Sync icon 🔄 | Make functional → spinning animation + "Updated" feedback | Calendar header |
+
+---
+
+## ROLE SEPARATION RULE (Critical)
+
+```
+PATIENT LOGIN:
+  Calendar shows → only THIS patient's visits
+  No Subject IDs shown → replaced with visit names
+  No other patients visible → ever
+
+PI / INVESTIGATOR LOGIN:
+  Calendar shows → ALL patients at their site
+  Subject IDs shown → SUBJ-001, SUBJ-007 etc.
+  Multi-patient view → current behavior (keep as is)
+```
+
+This separation must be enforced by checking the user role from login state.
+
+---
+
+*End of Patient Dashboard & Calendar Fixes Prompt*
+*Changes: Medication tick animation + Patient-only calendar + Weekly view fix + Working icons*
+
+
+
+
+
+# V0.DEV PROMPT — "My Trial" Tab (Patient Bottom Navigation)
+## Replace "Patients" tab with "My Trial" — Complete Hub Screen
+
+---
+
+## CHANGE OVERVIEW
+
+The patient bottom navigation currently shows a "Patients" tab which is irrelevant for patients.
+Replace it with a **"My Trial"** tab that serves as a complete hub for the patient's trial journey.
+
+```
+OLD (wrong):  Home | Patients | Calendar | Notifs | Me
+NEW (correct): Home | My Trial | Calendar | Notifs | Me
+```
+
+**Icon for My Trial tab:** Flask / test-tube icon (ti-flask or FlaskConical from Lucide)
+
+---
+
+## BOTTOM NAVIGATION — PATIENT ROLE (Final Version)
+
+```
+┌──────────────────────────────────────────────────┐
+│  🏠        🧪        📅        🔔        👤      │
+│  Home    My Trial  Calendar   Notifs     Me       │
+└──────────────────────────────────────────────────┘
+```
+
+- Active tab: icon + label in `#0D1B3E` + top border indicator line (2px, `#0D1B3E`)
+- Inactive: `#94A3B8` icon + label
+- Badge: red circle with count on Notifs icon only
+- Height: 64px, white bg, border-top `0.5px solid #E2E8F0`
+
+---
+
+## MY TRIAL SCREEN — FULL SPEC
+
+### Route: `/my-trial`
+### Entry: Tap "My Trial" tab in bottom navigation
+### Header:
+
+```
+My Trial
+Protocol-001 · Dr. Sharma          ← subtitle, gray, 13px
+```
+
+- Back navigation: NOT needed (it's a bottom tab, not a pushed screen)
+- No back arrow — it's a root tab screen
+- Title: "My Trial" (Sora, 17px, `#0D1B3E`, bold)
+- Subtitle: Protocol ID + PI name (gray, 13px, below title)
+
+---
+
+## THREE INNER TABS (inside My Trial screen)
+
+```
+[ Visits ]  [ Medications ]  [ Progress ]
+```
+
+- Pill-style tab row, full width, below the header
+- Active tab: `#0D1B3E` bg, white text, rounded-lg
+- Inactive: white bg, `#E2E8F0` border, `#64748B` text
+- Default active tab: **Visits**
+- Tab switch: instant (no animation needed, content swaps)
+
+---
+
+## TAB 1 — VISITS
+
+### Progress Mini-Card (always visible at top of Visits tab)
+```
+┌─────────────────────────────────────────┐
+│  Your progress · Visit 6 of 10  [60%]   │
+│  ████████████░░░░░░░░  6 done · 4 left  │
+└─────────────────────────────────────────┘
+```
+- White card, shadow, rounded-xl
+- Progress bar: teal fill `#0D9488`, gray track
+- "6 done · 4 left" — small gray text right-aligned
+
+---
+
+### All Visits List (scrollable, below progress card)
+
+Section header: "All Visits" (12px uppercase gray, letter-spacing)
+
+Each visit is a row:
+
+```
+●  Visit 1 · Screening                    [Done ✓]
+   3 Mar 2025 · Hospital
+
+●  Visit 6 · Week 12 Follow-Up            [Done ✓]
+   19 May 2025 · Hospital
+
+◉  Visit 7 · Week 14 Follow-Up            [Next →]
+   23 May 2025 · Hospital · Window: 20–26 May
+
+○  Visit 8 · Week 16 Check-In             [Scheduled]
+   9 Jun 2025 · Hospital
+
+○  Visit 9 · Week 20 Check-In             [Scheduled]
+   7 Jul 2025 · Telephonic
+
+○  Visit 10 · End of Trial                [Scheduled]
+   18 Aug 2025 · Hospital
+```
+
+**Dot colors:**
+- Teal filled dot = Completed
+- Amber filled dot = Next/Upcoming
+- Gray empty dot = Scheduled (future)
+- Red dot = Missed
+
+**Row anatomy:**
+```
+[dot]  Visit name (bold, 14px)              [badge]
+       Date · Type icon + type              [chevron →]
+       Window: dates (only for upcoming)
+```
+
+- Visit type icons: 🏥 Hospital | 📞 Telephonic | 🏠 Home
+- Tap any row → full Visit Detail screen (separate full screen, back arrow returns here)
+- "Next" visit row: amber-50 bg, amber left border (highlighted)
+- "Missed" visit row: red-50 bg, red left border
+
+**Visit Detail Screen (when row tapped):**
+- Full screen (not bottom sheet)
+- App bar: back arrow "← My Trial" + "Visit 7 Details"
+- Info card (navy gradient): visit name, date, window, hospital, PI
+- Status badge (large): Upcoming / Completed / Scheduled / Missed
+- Instructions section (from protocol): bullet list of what to do
+  - "Fast for 8 hours before visit"
+  - "Bring your patient ID card"
+  - "Wear comfortable clothing"
+- Clinical tasks (read-only for patient, shown as checklist greyed out): Vital signs, Blood draw, ECG
+- [Contact PI] button → opens Chat screen
+- [Get Directions] → maps link for hospital visits
+- Completed visits show: completion date + "Confirmed by Dr. Sharma"
+
+---
+
+## TAB 2 — MEDICATIONS
+
+### Today's Summary Card (top)
+```
+┌─────────────────────────────────────────┐
+│  Today's Medications                    │
+│                                         │
+│     ⬤⬤○    2 of 3 taken               │
+│     (teal dots = taken, gray = pending) │
+└─────────────────────────────────────────┘
+```
+- Dot progress indicator (3 dots for 3 meds)
+- "All done ✓" teal text when complete
+
+---
+
+### Today's Medication List
+
+Section header: "Today · [date]"
+
+**Pending medication card (amber-50 bg, amber border):**
+```
+┌─────────────────────────────────────────┐
+│  💊  Aspirin 75mg              [Pending]│
+│      🕐 2:00 PM                         │
+│                                         │
+│  [✓ Taken] [✗ Not Taken] [Skip] [Later]│
+└─────────────────────────────────────────┘
+```
+Action buttons (4, inline row):
+- **[✓ Taken]** — teal filled → triggers task-app animation (card collapses, status updates)
+- **[✗ Not Taken]** — red outlined
+- **[Skip]** — amber outlined
+- **[Later]** — gray outlined (reschedules reminder)
+
+**Taken medication card (green-50 bg, collapsed/minimal):**
+```
+💊  Metformin 500mg · 8:00 AM    ✓ Taken at 8:03 AM
+```
+- Smaller height (no action buttons)
+- Strikethrough on name? No — just gray text to show it's done
+- "Taken at [time]" shown in green, 12px
+
+**All done state:**
+```
+┌─────────────────────────────────────────┐
+│          ✅                             │
+│   All medications done for today!       │
+│   No more doses required                │
+│   Great job keeping up 💪              │
+└─────────────────────────────────────────┘
+```
+Teal left border (4px), green-50 bg
+
+---
+
+### Inner Tabs within Medications (below Today list)
+
+```
+[ Today ]  [ Schedule ]  [ History ]
+```
+
+**Schedule tab:**
+- Full medication schedule cards (expandable):
+
+```
+┌─────────────────────────────────────────┐
+│  💊  Metformin 500mg                 ▼  │
+│      500mg · Oral tablet                │
+│      Twice daily: 8:00 AM & 8:00 PM     │
+│      Instructions: Take with food       │
+│      Period: 1 Mar 2025 – 18 Aug 2025   │
+└─────────────────────────────────────────┘
+```
+
+**History tab:**
+- Grouped by date (newest first)
+- Each day shows all medications + status badges
+
+```
+25 May 2025
+  Metformin 500mg · 8:00 AM     [Taken ✓]
+  Aspirin 75mg · 2:00 PM        [Taken ✓]
+  Metformin 500mg · 8:00 PM     [Taken ✓]
+
+24 May 2025
+  Metformin 500mg · 8:00 AM     [Taken ✓]
+  Aspirin 75mg · 2:00 PM        [Skipped]
+  Metformin 500mg · 8:00 PM     [Taken ✓]
+```
+
+Status badge colors:
+- Taken: emerald-100 bg, emerald-700 text
+- Not Taken: red-100 bg, red-700 text
+- Skipped: amber-100 bg, amber-700 text
+
+---
+
+## TAB 3 — PROGRESS
+
+This tab gives the patient a full picture of their trial journey.
+
+### Summary Stats Row (4 mini-cards, 2×2 grid)
+```
+┌──────────┐  ┌──────────┐
+│    6     │  │    1     │
+│ Completed│  │ Upcoming │
+└──────────┘  └──────────┘
+┌──────────┐  ┌──────────┐
+│    3     │  │   93%    │
+│ Remaining│  │ Med. Rate│
+└──────────┘  └──────────┘
+```
+- "6" in teal | "1" in amber | "3" in gray | "93%" in blue
+- Small label below each number
+
+---
+
+### Visit Progress Bar
+```
+Visit Completion
+━━━━━━━━━━━━━━░░░░░░░░  6 of 10 (60%)
+```
+- Teal fill, gray track, 10px height, rounded
+- "6 of 10 visits complete" below bar, gray 12px
+
+---
+
+### Medication Adherence Bar
+```
+Medication Adherence · This Week
+━━━━━━━━━━━━━━━━━━░░  13 of 14 doses (93%)
+```
+- Blue fill `#2563EB`, gray track
+- "Excellent adherence!" label in green if >90%
+- "Good job!" if 70–90%
+- "Please improve" in amber if <70%
+
+---
+
+### Study Timeline Card
+```
+┌─────────────────────────────────────────┐
+│  Study Timeline                         │
+│                                         │
+│  Started         3 Mar 2025             │
+│  Current         Week 12 of 24  ←now   │
+│  Estimated end   18 Aug 2025            │
+│                                         │
+│  ●●●●●●━━━━━━━━━━━━○  50% through      │
+│  (teal dots = past weeks, gray = future)│
+└─────────────────────────────────────────┘
+```
+- Horizontal dot timeline: filled teal for completed weeks, gray for remaining
+- "50% through the study" progress text
+
+---
+
+### Weekly Medication Heatmap (last 4 weeks)
+
+```
+        M   T   W   T   F   S   S
+Week 1  ✓   ✓   ✓   ✓   ✗   ✓   ✓
+Week 2  ✓   ✓   ✓   ✓   ✓   ✓   ✓
+Week 3  ✓   ✓   ✓   ✓   ✓   ✓   ✓
+Week 4  ✓   ✓   ✓   ✓   ✓   ✓   -
+```
+
+- Each cell: 24×24px rounded square
+- ✓ taken = teal-100 bg with teal check icon
+- ✗ missed = red-100 bg with red X icon
+- `-` = today/future = gray-100 bg empty
+- Label column "Wk 1" etc on left
+- Day letters S M T W T F S on top
+
+---
+
+## NAVIGATION RULES
+
+| Action | Destination |
+|--------|-------------|
+| Tap "My Trial" bottom tab | My Trial screen (Visits tab default) |
+| Tap visit row | Visit Detail full screen |
+| Back arrow on Visit Detail | Returns to My Trial → Visits tab |
+| Tap [Contact PI] on Visit Detail | Chat screen |
+| Tap medication action (Taken etc.) | Stays on My Trial → Medications tab, updates in place |
+| Tap any bottom tab | Switches root screen (My Trial state preserved) |
+
+---
+
+## MOCK DATA TO USE
+
+**Patient:** Priya Kapoor (PK) · Protocol-001 · Dr. Sharma · AIIMS Delhi
+
+**Visits:**
+| # | Name | Date | Status | Type |
+|---|------|------|--------|------|
+| 1 | Screening | 3 Mar 2025 | Completed | Hospital |
+| 2 | Baseline | 10 Mar 2025 | Completed | Hospital |
+| 3 | Week 2 | 24 Mar 2025 | Completed | Hospital |
+| 4 | Week 4 | 7 Apr 2025 | Completed | Hospital |
+| 5 | Week 8 | 5 May 2025 | Completed | Hospital |
+| 6 | Week 12 | 19 May 2025 | Completed | Hospital |
+| 7 | Week 14 | 23 May 2025 | Upcoming (NEXT) | Hospital |
+| 8 | Week 16 | 9 Jun 2025 | Scheduled | Hospital |
+| 9 | Week 20 | 7 Jul 2025 | Scheduled | Telephonic |
+| 10 | End of Trial | 18 Aug 2025 | Scheduled | Hospital |
+
+**Medications:**
+| Drug | Dose | Frequency | Times | Period |
+|------|------|-----------|-------|--------|
+| Metformin | 500mg | Twice daily | 8AM + 8PM | 1 Mar – 18 Aug 2025 |
+| Aspirin | 75mg | Once daily | 2PM | 1 Mar – 18 Aug 2025 |
+
+**Today's medication status (mock):**
+- Metformin 8AM → Taken at 8:03 AM ✓
+- Aspirin 2PM → Pending (current time = 9:41 AM)
+- Metformin 8PM → Upcoming (later today)
+
+---
+
+## WHAT IS REMOVED FROM BOTTOM NAV
+
+| Removed Tab | Why | Where content went |
+|---|---|---|
+| Patients 👥 | Patients don't manage other patients | Removed entirely |
+
+**"Patients" tab must NOT appear in patient role under any circumstance.**
+This tab only appears for Investigator/PI and Sponsor/CRO roles.
+
+---
+
+## FINAL PATIENT BOTTOM NAV SPEC
+
+```
+Tab       Icon              Route           Badge
+────────────────────────────────────────────────
+Home      ti-home           /dashboard      —
+My Trial  ti-flask          /my-trial       —
+Calendar  ti-calendar       /calendar       —
+Notifs    ti-bell           /notifications  red count badge
+Me        ti-user           /profile        —
+```
+
+---
+
+*End of My Trial Tab Prompt*
+*Single hub: Visits list + Visit detail + Medications (Today/Schedule/History) + Progress stats*
+*Replaces both the "Patients" tab AND the separate "Medication Reminders" screen*
+
+
+
+# V0.DEV PROMPT — "My Trial" Tab (Patient Bottom Navigation)
+## Replace "Patients" tab with "My Trial" — Complete Hub Screen
+
+---
+
+## CHANGE OVERVIEW
+
+The patient bottom navigation currently shows a "Patients" tab which is irrelevant for patients.
+Replace it with a **"My Trial"** tab that serves as a complete hub for the patient's trial journey.
+
+```
+OLD (wrong):  Home | Patients | Calendar | Notifs | Me
+NEW (correct): Home | My Trial | Calendar | Notifs | Me
+```
+
+**Icon for My Trial tab:** Flask / test-tube icon (ti-flask or FlaskConical from Lucide)
+
+---
+
+## BOTTOM NAVIGATION — PATIENT ROLE (Final Version)
+
+```
+┌──────────────────────────────────────────────────┐
+│  🏠        🧪        📅        🔔        👤      │
+│  Home    My Trial  Calendar   Notifs     Me       │
+└──────────────────────────────────────────────────┘
+```
+
+- Active tab: icon + label in `#0D1B3E` + top border indicator line (2px, `#0D1B3E`)
+- Inactive: `#94A3B8` icon + label
+- Badge: red circle with count on Notifs icon only
+- Height: 64px, white bg, border-top `0.5px solid #E2E8F0`
+
+---
+
+## MY TRIAL SCREEN — FULL SPEC
+
+### Route: `/my-trial`
+### Entry: Tap "My Trial" tab in bottom navigation
+### Header:
+
+```
+My Trial
+Protocol-001 · Dr. Sharma          ← subtitle, gray, 13px
+```
+
+- Back navigation: NOT needed (it's a bottom tab, not a pushed screen)
+- No back arrow — it's a root tab screen
+- Title: "My Trial" (Sora, 17px, `#0D1B3E`, bold)
+- Subtitle: Protocol ID + PI name (gray, 13px, below title)
+
+---
+
+## THREE INNER TABS (inside My Trial screen)
+
+```
+[ Visits ]  [ Medications ]  [ Progress ]
+```
+
+- Pill-style tab row, full width, below the header
+- Active tab: `#0D1B3E` bg, white text, rounded-lg
+- Inactive: white bg, `#E2E8F0` border, `#64748B` text
+- Default active tab: **Visits**
+- Tab switch: instant (no animation needed, content swaps)
+
+---
+
+## TAB 1 — VISITS
+
+### Progress Mini-Card (always visible at top of Visits tab)
+```
+┌─────────────────────────────────────────┐
+│  Your progress · Visit 6 of 10  [60%]   │
+│  ████████████░░░░░░░░  6 done · 4 left  │
+└─────────────────────────────────────────┘
+```
+- White card, shadow, rounded-xl
+- Progress bar: teal fill `#0D9488`, gray track
+- "6 done · 4 left" — small gray text right-aligned
+
+---
+
+### All Visits List (scrollable, below progress card)
+
+Section header: "All Visits" (12px uppercase gray, letter-spacing)
+
+Each visit is a row:
+
+```
+●  Visit 1 · Screening                    [Done ✓]
+   3 Mar 2025 · Hospital
+
+●  Visit 6 · Week 12 Follow-Up            [Done ✓]
+   19 May 2025 · Hospital
+
+◉  Visit 7 · Week 14 Follow-Up            [Next →]
+   23 May 2025 · Hospital · Window: 20–26 May
+
+○  Visit 8 · Week 16 Check-In             [Scheduled]
+   9 Jun 2025 · Hospital
+
+○  Visit 9 · Week 20 Check-In             [Scheduled]
+   7 Jul 2025 · Telephonic
+
+○  Visit 10 · End of Trial                [Scheduled]
+   18 Aug 2025 · Hospital
+```
+
+**Dot colors:**
+- Teal filled dot = Completed
+- Amber filled dot = Next/Upcoming
+- Gray empty dot = Scheduled (future)
+- Red dot = Missed
+
+**Row anatomy:**
+```
+[dot]  Visit name (bold, 14px)              [badge]
+       Date · Type icon + type              [chevron →]
+       Window: dates (only for upcoming)
+```
+
+- Visit type icons: 🏥 Hospital | 📞 Telephonic | 🏠 Home
+- Tap any row → full Visit Detail screen (separate full screen, back arrow returns here)
+- "Next" visit row: amber-50 bg, amber left border (highlighted)
+- "Missed" visit row: red-50 bg, red left border
+
+**Visit Detail Screen (when row tapped):**
+- Full screen (not bottom sheet)
+- App bar: back arrow "← My Trial" + "Visit 7 Details"
+- Info card (navy gradient): visit name, date, window, hospital, PI
+- Status badge (large): Upcoming / Completed / Scheduled / Missed
+- Instructions section (from protocol): bullet list of what to do
+  - "Fast for 8 hours before visit"
+  - "Bring your patient ID card"
+  - "Wear comfortable clothing"
+- Clinical tasks (read-only for patient, shown as checklist greyed out): Vital signs, Blood draw, ECG
+- [Contact PI] button → opens Chat screen
+- [Get Directions] → maps link for hospital visits
+- Completed visits show: completion date + "Confirmed by Dr. Sharma"
+
+---
+
+## TAB 2 — MEDICATIONS
+
+### Today's Summary Card (top)
+```
+┌─────────────────────────────────────────┐
+│  Today's Medications                    │
+│                                         │
+│     ⬤⬤○    2 of 3 taken               │
+│     (teal dots = taken, gray = pending) │
+└─────────────────────────────────────────┘
+```
+- Dot progress indicator (3 dots for 3 meds)
+- "All done ✓" teal text when complete
+
+---
+
+### Today's Medication List
+
+Section header: "Today · [date]"
+
+**Pending medication card (amber-50 bg, amber border):**
+```
+┌─────────────────────────────────────────┐
+│  💊  Aspirin 75mg              [Pending]│
+│      🕐 2:00 PM                         │
+│                                         │
+│  [✓ Taken] [✗ Not Taken] [Skip] [Later]│
+└─────────────────────────────────────────┘
+```
+Action buttons (4, inline row):
+- **[✓ Taken]** — teal filled → triggers task-app animation (card collapses, status updates)
+- **[✗ Not Taken]** — red outlined
+- **[Skip]** — amber outlined
+- **[Later]** — gray outlined (reschedules reminder)
+
+**Taken medication card (green-50 bg, collapsed/minimal):**
+```
+💊  Metformin 500mg · 8:00 AM    ✓ Taken at 8:03 AM
+```
+- Smaller height (no action buttons)
+- Strikethrough on name? No — just gray text to show it's done
+- "Taken at [time]" shown in green, 12px
+
+**All done state:**
+```
+┌─────────────────────────────────────────┐
+│          ✅                             │
+│   All medications done for today!       │
+│   No more doses required                │
+│   Great job keeping up 💪              │
+└─────────────────────────────────────────┘
+```
+Teal left border (4px), green-50 bg
+
+---
+
+### Inner Tabs within Medications (below Today list)
+
+```
+[ Today ]  [ Schedule ]  [ History ]
+```
+
+**Schedule tab:**
+- Full medication schedule cards (expandable):
+
+```
+┌─────────────────────────────────────────┐
+│  💊  Metformin 500mg                 ▼  │
+│      500mg · Oral tablet                │
+│      Twice daily: 8:00 AM & 8:00 PM     │
+│      Instructions: Take with food       │
+│      Period: 1 Mar 2025 – 18 Aug 2025   │
+└─────────────────────────────────────────┘
+```
+
+**History tab:**
+- Grouped by date (newest first)
+- Each day shows all medications + status badges
+
+```
+25 May 2025
+  Metformin 500mg · 8:00 AM     [Taken ✓]
+  Aspirin 75mg · 2:00 PM        [Taken ✓]
+  Metformin 500mg · 8:00 PM     [Taken ✓]
+
+24 May 2025
+  Metformin 500mg · 8:00 AM     [Taken ✓]
+  Aspirin 75mg · 2:00 PM        [Skipped]
+  Metformin 500mg · 8:00 PM     [Taken ✓]
+```
+
+Status badge colors:
+- Taken: emerald-100 bg, emerald-700 text
+- Not Taken: red-100 bg, red-700 text
+- Skipped: amber-100 bg, amber-700 text
+
+---
+
+## TAB 3 — PROGRESS
+
+This tab gives the patient a full picture of their trial journey.
+
+### Summary Stats Row (4 mini-cards, 2×2 grid)
+```
+┌──────────┐  ┌──────────┐
+│    6     │  │    1     │
+│ Completed│  │ Upcoming │
+└──────────┘  └──────────┘
+┌──────────┐  ┌──────────┐
+│    3     │  │   93%    │
+│ Remaining│  │ Med. Rate│
+└──────────┘  └──────────┘
+```
+- "6" in teal | "1" in amber | "3" in gray | "93%" in blue
+- Small label below each number
+
+---
+
+### Visit Progress Bar
+```
+Visit Completion
+━━━━━━━━━━━━━━░░░░░░░░  6 of 10 (60%)
+```
+- Teal fill, gray track, 10px height, rounded
+- "6 of 10 visits complete" below bar, gray 12px
+
+---
+
+### Medication Adherence Bar
+```
+Medication Adherence · This Week
+━━━━━━━━━━━━━━━━━━░░  13 of 14 doses (93%)
+```
+- Blue fill `#2563EB`, gray track
+- "Excellent adherence!" label in green if >90%
+- "Good job!" if 70–90%
+- "Please improve" in amber if <70%
+
+---
+
+### Study Timeline Card
+```
+┌─────────────────────────────────────────┐
+│  Study Timeline                         │
+│                                         │
+│  Started         3 Mar 2025             │
+│  Current         Week 12 of 24  ←now   │
+│  Estimated end   18 Aug 2025            │
+│                                         │
+│  ●●●●●●━━━━━━━━━━━━○  50% through      │
+│  (teal dots = past weeks, gray = future)│
+└─────────────────────────────────────────┘
+```
+- Horizontal dot timeline: filled teal for completed weeks, gray for remaining
+- "50% through the study" progress text
+
+---
+
+### Weekly Medication Heatmap (last 4 weeks)
+
+```
+        M   T   W   T   F   S   S
+Week 1  ✓   ✓   ✓   ✓   ✗   ✓   ✓
+Week 2  ✓   ✓   ✓   ✓   ✓   ✓   ✓
+Week 3  ✓   ✓   ✓   ✓   ✓   ✓   ✓
+Week 4  ✓   ✓   ✓   ✓   ✓   ✓   -
+```
+
+- Each cell: 24×24px rounded square
+- ✓ taken = teal-100 bg with teal check icon
+- ✗ missed = red-100 bg with red X icon
+- `-` = today/future = gray-100 bg empty
+- Label column "Wk 1" etc on left
+- Day letters S M T W T F S on top
+
+---
+
+## NAVIGATION RULES
+
+| Action | Destination |
+|--------|-------------|
+| Tap "My Trial" bottom tab | My Trial screen (Visits tab default) |
+| Tap visit row | Visit Detail full screen |
+| Back arrow on Visit Detail | Returns to My Trial → Visits tab |
+| Tap [Contact PI] on Visit Detail | Chat screen |
+| Tap medication action (Taken etc.) | Stays on My Trial → Medications tab, updates in place |
+| Tap any bottom tab | Switches root screen (My Trial state preserved) |
+
+---
+
+## MOCK DATA TO USE
+
+**Patient:** Priya Kapoor (PK) · Protocol-001 · Dr. Sharma · AIIMS Delhi
+
+**Visits:**
+| # | Name | Date | Status | Type |
+|---|------|------|--------|------|
+| 1 | Screening | 3 Mar 2025 | Completed | Hospital |
+| 2 | Baseline | 10 Mar 2025 | Completed | Hospital |
+| 3 | Week 2 | 24 Mar 2025 | Completed | Hospital |
+| 4 | Week 4 | 7 Apr 2025 | Completed | Hospital |
+| 5 | Week 8 | 5 May 2025 | Completed | Hospital |
+| 6 | Week 12 | 19 May 2025 | Completed | Hospital |
+| 7 | Week 14 | 23 May 2025 | Upcoming (NEXT) | Hospital |
+| 8 | Week 16 | 9 Jun 2025 | Scheduled | Hospital |
+| 9 | Week 20 | 7 Jul 2025 | Scheduled | Telephonic |
+| 10 | End of Trial | 18 Aug 2025 | Scheduled | Hospital |
+
+**Medications:**
+| Drug | Dose | Frequency | Times | Period |
+|------|------|-----------|-------|--------|
+| Metformin | 500mg | Twice daily | 8AM + 8PM | 1 Mar – 18 Aug 2025 |
+| Aspirin | 75mg | Once daily | 2PM | 1 Mar – 18 Aug 2025 |
+
+**Today's medication status (mock):**
+- Metformin 8AM → Taken at 8:03 AM ✓
+- Aspirin 2PM → Pending (current time = 9:41 AM)
+- Metformin 8PM → Upcoming (later today)
+
+---
+
+## WHAT IS REMOVED FROM BOTTOM NAV
+
+| Removed Tab | Why | Where content went |
+|---|---|---|
+| Patients 👥 | Patients don't manage other patients | Removed entirely |
+
+**"Patients" tab must NOT appear in patient role under any circumstance.**
+This tab only appears for Investigator/PI and Sponsor/CRO roles.
+
+---
+
+## FINAL PATIENT BOTTOM NAV SPEC
+
+```
+Tab       Icon              Route           Badge
+────────────────────────────────────────────────
+Home      ti-home           /dashboard      —
+My Trial  ti-flask          /my-trial       —
+Calendar  ti-calendar       /calendar       —
+Notifs    ti-bell           /notifications  red count badge
+Me        ti-user           /profile        —
+```
+
+---
+
+*End of My Trial Tab Prompt*
+*Single hub: Visits list + Visit detail + Medications (Today/Schedule/History) + Progress stats*
+*Replaces both the "Patients" tab AND the separate "Medication Reminders" screen*
+
+
+
+# v0.dev Prompt: Sponsor/CRO Navigation — Option A Full Implementation
+
+## PASTE THIS ENTIRE PROMPT INTO v0.dev
+
+---
+
+Build a complete **Sponsor/CRO mobile app** in React with Tailwind CSS implementing the full bottom navigation with 5 tabs: **Dashboard → Trials → Sites → Notifs → Me**. This replaces the old Patients and Calendar tabs which were investigator-centric and don't belong in the sponsor workflow.
+
+Mobile-first, 390px max-width centered on desktop. Use `lucide-react` for all icons.
+
+---
+
+## DESIGN SYSTEM
+
+```
+Primary navy:     #0D1B3E
+Medium blue:      #1E3A6E  
+Action blue:      #2563EB
+Teal (good):      #0D9488
+Red (alert):      #DC2626
+Amber (warning):  #F59E0B
+Green (success):  #16A34A
+Background:       #F8FAFC
+Card:             #FFFFFF
+Text primary:     #0F172A
+Text secondary:   #64748B
+Border:           #E2E8F0
+```
+
+Global component rules:
+- All cards: `bg-white rounded-2xl border border-slate-100 shadow-sm p-4`
+- Primary button: `bg-[#2563EB] text-white rounded-xl py-3 px-5 font-semibold text-sm w-full`
+- Outlined button: `border border-[#2563EB] text-[#2563EB] rounded-xl py-3 px-5 font-semibold text-sm`
+- Status badge: `rounded-full px-3 py-1 text-xs font-semibold`
+- Section label: `text-xs font-semibold text-slate-400 uppercase tracking-wider`
+- Input: `border border-slate-200 rounded-xl px-4 py-3 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500`
+- Bottom nav height: 64px, white bg, top border `border-t border-slate-100`
+- App bar height: 60px
+
+---
+
+## BOTTOM NAVIGATION (persistent across all tabs)
+
+Fixed bottom bar with 5 tabs:
+
+| Tab | Icon | Label | Active color |
+|-----|------|-------|-------------|
+| Dashboard | `LayoutDashboard` | Dashboard | #2563EB |
+| Trials | `FlaskConical` | Trials | #2563EB |
+| Sites | `MapPin` | Sites | #2563EB |
+| Notifs | `Bell` | Notifs | #2563EB |
+| Me | `User` | Me | #2563EB |
+
+Active tab: icon + label in `#2563EB`, filled icon weight
+Inactive tab: icon + label in `#94A3B8`
+Badge on Notifs: red circle with white number (2) when unread exist
+
+---
+
+## SCREEN 1: DASHBOARD TAB (active by default)
+
+### App Bar
+- Left: "Good morning, Rajesh ☀️" in navy bold 16px
+- Right: Bell icon (with red badge "2") + Avatar circle "RK" in navy bg
+
+### KPI Scroll Strip
+Horizontally scrollable row of 3 cards (show 2.5 on screen to hint scroll):
+```
+Card 1: FlaskConical icon (blue)  | "12"  bold 24px | "Trials"  label
+Card 2: MapPin icon (teal)        | "8"   bold 24px | "Sites"   label  
+Card 3: Users icon (navy)         | "247" bold 24px | "Patients" label
+```
+Each card: white bg, rounded-2xl, border, px-5 py-4, min-w-[120px]
+Small up arrow (TrendingUp, green, 10px) + "+2 this month" below number in slate-400 text-xs
+
+### Recruitment Overview Section
+Header row: "Recruitment Overview" bold 15px + "See All ›" blue text link (→ Trials tab)
+
+**Trial card** (white card, rounded-2xl, border):
+- Top: `Protocol-001` blue chip (xs) 
+- Trial name: "Diabetes Phase II" bold 16px
+- 2×2 stat grid:
+  ```
+  Screened  48  |  Randomized  32
+  Screen Fail 8 |  Completed   12
+  ```
+  Screen Fail number in red, Completed in teal
+- Progress bar: blue fill, rounded-full, h-2
+- "65% Complete" text-xs slate-500 below bar
+- Right arrow chevron on card edge
+
+Show 1 card fully, second card partially visible (hint horizontal scroll)
+
+### Quick Actions Row
+3 buttons side by side (each flex-1):
+```
+[+ Add Trial]   [+ Add Site]   [↗ Reports]
+```
+- Add Trial: outlined blue button with Plus icon
+- Add Site: outlined blue button with Plus+MapPin icon  
+- Reports: outlined slate button with BarChart2 icon
+- Tapping Add Trial → navigate to Add Trial screen (see below)
+- Tapping Add Site → navigate to Add Site screen
+- Tapping Reports → navigate to Me tab → Reports section
+
+### Site Performance Section
+Header: "Site Performance" bold 15px + "View All ›" blue link (→ Sites tab)
+
+3 site rows:
+```
+Apollo Mumbai    ████████░░  85%
+Max Delhi        ███████░░░  72%
+Fortis Bangalore █████░░░░░  65%
+```
+Each row: site name text-sm + progress bar (blue, h-2, rounded-full) + % text-xs bold
+Progress bar track: slate-100 bg
+
+---
+
+## SCREEN 2: TRIALS TAB
+
+### App Bar
+- "Trials" title centered bold 17px
+- Right: Filter icon (SlidersHorizontal) + Plus icon (circle, blue bg, white icon)
+
+### Search + Filter Row
+- Search bar full width: Search icon + "Search trials..." placeholder + X clear button
+- Below: horizontal scroll filter chips:
+  `All (12)` `Active (9)` `Completed (2)` `Terminated (1)`
+  Active chip: blue bg white text. Others: white bg slate border
+
+### Trial List (scrollable)
+Each trial card (white, rounded-2xl, border, p-4, mb-3):
+
+**Card anatomy:**
+```
+[Protocol-001 chip]              [● Active]
+Diabetes Phase II                        ›
+PharmaCo Ltd  ·  3 Sites
+
+Enrolled  ████████░░  45/100
+          
+[Screening] [Phase II] [12 May modified]
+```
+
+- Protocol ID: blue chip xs
+- Status badge top-right: Active=green, Completed=blue, Terminated=red
+- Trial name: bold 15px, 1 line truncated
+- Sponsor name + site count: text-xs slate-500, dot separator
+- Enrollment progress bar (blue, h-2) + "45/100 enrolled" text-xs
+- Bottom tag row: Phase chip, indication chip, "Modified 12 May" with Clock icon xs
+
+**Tap card → Trial Detail Screen (push new screen)**
+
+### Trial Detail Screen (pushed, has back arrow)
+
+**App bar:** Back arrow + Protocol ID as title + Download icon (right)
+
+**Hero info card** (navy bg #0D1B3E, white text, rounded-2xl, p-5):
+```
+Protocol-001                    [● Active]
+Diabetes Phase II
+
+Sponsor: PharmaCo Ltd
+Phase: II  ·  CTRI: CTRI/2024/001
+Duration: 18 months  ·  18 visits total
+```
+
+**Stats row** (3 mini cards below hero):
+```
+Screened    Enrolled    Completed
+   48          45           12
+```
+
+**Section: Sites on this Trial**
+- Mini site cards (horizontal scroll):
+  ```
+  Apollo Mumbai          Max Delhi
+  PI: Dr. Sharma         PI: Dr. Rao
+  22/40 enrolled         15/30 enrolled
+  ██████░░  55%          █████░░░  50%
+  ```
+- "+ Add Site to Trial" outlined button
+
+**Section: Visit Schedule**
+- "Schedule v3 · Last updated 12 May by Dr. Sharma" row with Edit (Pencil) icon
+- Mini table showing first 4 visits:
+  ```
+  #  Visit Name      Day   Window   Type
+  1  Screening       -7    ±2       Hospital
+  2  Baseline         0    ±1       Hospital
+  3  Follow-Up 1     14    ±3       Telephonic
+  4  Follow-Up 2     28    ±3       Hospital
+  ```
+  "View All 18 Visits" blue link → full schedule screen
+- "Edit Schedule" outlined button
+
+**Section: Recruitment Overview**
+- Full stat breakdown: Screened / Randomized / Screen Fail / Withdrawn / Completed
+- Enrollment progress bar (large, h-3)
+
+**Section: Documents**
+- **NEW:** "Protocol Document" row: FileText icon + filename + Upload date + Download icon
+- "Patient Information Sheet" row: same
+- "+ Upload Document" outlined button
+
+**Bottom sticky bar:**
+```
+[Edit Trial Details]     [Share with Site ›]
+```
+
+---
+
+## SCREEN 3: SITES TAB
+
+### App Bar  
+- "Sites" title centered bold 17px
+- Right: Plus circle (blue) → Add Site screen
+
+### Summary Stats Row (2 cards)
+```
+[MapPin icon]  8 Total Sites    [Users icon]  247 Patients
+```
+Both: slate-50 bg, rounded-xl, p-3
+
+### Search + Filter
+- Search bar: "Search sites..."
+- Filter chips: `All (8)` `Active (6)` `Inactive (2)`
+
+### Sites List (scrollable)
+Each site card (white, rounded-2xl, border, p-4, mb-3):
+
+**Card anatomy:**
+```
+Apollo Mumbai                    [● Active]
+📍 Mumbai, Maharashtra                    ›
+
+PI: Dr. Rajesh Sharma
+CRC: Ms. Priya Desai
+
+Trials: 2  ·  Patients: 45
+
+Enrollment  ████████░░  85%
+            72/85 enrolled
+```
+
+- Site name bold 15px + Status badge
+- Location: MapPin icon xs + city, state text-xs slate-500
+- PI name row: UserCheck icon + name text-sm
+- CRC name row: Users icon + name text-sm slate-500
+- Trial count + patient count with dot separator text-xs
+- Enrollment progress bar (teal, h-2) + enrolled/target text-xs
+- Tap card → Site Detail Screen
+
+### Site Detail Screen (pushed)
+
+**App bar:** Back arrow + Site name as title
+
+**Header card** (teal gradient or solid teal bg, white text, rounded-2xl, p-5):
+```
+Apollo Mumbai                    [● Active]
+📍 Bandra West, Mumbai, Maharashtra 400051
+
+Hospital: Apollo Hospitals Mumbai
+```
+
+**Contact cards** (2 side by side):
+```
+[Principal Investigator]     [Coordinator]
+Dr. Rajesh Sharma            Ms. Priya Desai
+📞  ✉️  buttons              📞  ✉️  buttons
+```
+Each: white card, rounded-xl, tap phone → call, tap mail → compose email
+
+**Active Trials section:**
+- Each trial: Protocol ID chip + trial name + "22/40 enrolled" + progress bar
+- Status badge per trial
+
+**Patient Enrollment section:**
+- "45 Patients Enrolled" header
+- **IMPORTANT:** Sponsor sees ONLY aggregate data, NOT individual patient records
+- Show enrollment breakdown: Active (38) / Screen Fail (4) / Withdrawn (3)
+- Bar chart (horizontal bars) showing this breakdown
+- **Note banner:** slate-50 bg, Info icon, "Patient-level data is managed by the site investigator"
+
+**Performance Metrics section:**
+```
+Enrollment Rate    Visit Completion    Screen Fail Rate
+    85%                  92%               8%
+```
+3 mini stat cards
+
+**Visit Window Compliance section:**
+- "Within window: 89%" progress indicator
+- "Overdue: 3 visits" red text with AlertTriangle icon
+
+**Documents from this site:**
+- List of uploaded docs with download icons
+
+**Bottom sticky buttons:**
+```
+[📞 Call Site]    [✉️ Email PI]    [⋮ More]
+```
+More → bottom sheet with: Edit Site Info / Deactivate Site / View Audit Log
+
+### Add Site Screen (pushed from + button or Quick Action)
+
+**App bar:** Back arrow + "Add Site"
+
+**Form fields (all rounded-xl inputs, labels above):**
+```
+Site Name *
+Hospital/Institution Name *
+Address Line 1 *
+Address Line 2
+City *          State *
+PIN Code        Country (default: India)
+
+──── Principal Investigator ────
+PI Full Name *
+PI Email *
+PI Phone * (+91 prefix)
+PI Registration Number (MCI/NMC)
+
+──── Coordinator ────
+CRC Name
+CRC Email
+CRC Phone (+91 prefix)
+
+──── Trial Assignment ────
+Assign to Trial(s)    [dropdown multi-select checkboxes]
+  ☑ Protocol-001 Diabetes Phase II
+  ☑ Protocol-002 Hypertension Study
+  ☐ Protocol-003 Oncology Trial
+
+──── Site Capacity ────
+Max Enrollment Target    [number input]
+Site Activation Date     [date picker]
+```
+
+**Bottom sticky:**
+```
+[Cancel]    [Add Site →]
+```
+Add Site button: blue, validates required fields, shows inline errors below each field
+
+---
+
+## SCREEN 4: NOTIFS TAB
+
+### App Bar
+- "Notifications" title bold 17px
+- Right: "Mark All Read" text button (blue, text-sm)
+
+### Filter chips
+`All` `Trials` `Sites` `Recruitment` `System`
+
+### Notification List (grouped by date)
+
+**Date divider:** "Today" / "Yesterday" / "12 May 2025" — text-xs slate-400 uppercase, horizontal lines each side
+
+**Notification card** (white, rounded-xl, border, p-3, mb-2):
+```
+● [icon circle]  Title text bold 14px         2h ago
+                 Message preview truncated     
+                 2 lines max, slate-500 13px   
+```
+
+- Unread: blue dot left edge + slightly darker bg (slate-50)
+- Read: no dot, white bg
+- Icon circles by type:
+  - Trial alert: blue circle, FlaskConical icon
+  - Site alert: teal circle, MapPin icon  
+  - Recruitment milestone: green circle, TrendingUp icon
+  - Overdue: red circle, AlertTriangle icon
+  - System: slate circle, Info icon
+
+**Notification types to show:**
+```
+● [blue]   Protocol-002 shared with Apollo Mumbai        2h ago
+           Hypertension Study has been assigned to the site
+
+● [green]  Recruitment milestone reached                  5h ago  
+           Protocol-001: 50% enrollment target achieved
+
+● [red]    Site visit overdue — Apollo Mumbai             1d ago
+           3 visits are outside the scheduled window
+
+  [teal]   Site activation confirmed                      2d ago
+           Max Delhi site is now active for Protocol-001
+
+  [slate]  Schedule updated — Protocol-001               3d ago
+           Visit schedule v3 uploaded by Dr. Sharma
+```
+
+**Swipe left on card** → reveals red Delete button (trash icon)
+**Tap card** → Notification Detail bottom sheet:
+- Full message (not truncated)
+- Timestamp
+- Action button: "View Trial" or "View Site" (contextual, blue)
+- "Dismiss" gray button
+
+---
+
+## SCREEN 5: ME TAB (Profile & Settings)
+
+### Profile Header
+- Avatar circle (large, 72px): "RK" initials, navy bg, white text — with Camera icon badge bottom-right
+- Name: "Rajesh Kumar" bold 18px
+- Role badge: "Sponsor Admin" blue chip
+- Organization: "PharmaCo Ltd" text-sm slate-500 with Building2 icon
+
+### Account Info card (white, rounded-2xl, border, p-4)
+```
+Email         rajesh.kumar@pharmaco.com
+Phone         +91 98765 43210
+Entity Type   Sponsor
+Role          Admin
+Member since  Jan 2024
+```
+Each row: icon (16px, slate-400) + label text-xs slate-400 + value text-sm text-primary
+Edit icon (Pencil, 14px, blue) on the right → Edit Profile screen
+
+### Menu Sections
+
+**ACCOUNT section label:**
+```
+[UserPen icon]    Edit Profile              ›
+[Lock icon]       Change Password           ›
+[Bell icon]       Notification Preferences  ›   ← NEW
+```
+
+**TRIAL MANAGEMENT section label:**
+```
+[FlaskConical]    My Trials                 ›   → Trials tab
+[MapPin]          My Sites                  ›   → Sites tab
+[Users]           Team Members              ›   ← NEW
+[FileText]        Documents                 ›   ← NEW
+```
+
+**REPORTS section label:**
+```
+[BarChart2]       Recruitment Reports       ›   ← NEW
+[Download]        Export Data               ›   ← NEW
+```
+
+**SUPPORT section label:**
+```
+[HelpCircle]      Help & FAQ                ›
+[MessageSquare]   Contact Support           ›
+[FileText]        Terms & Conditions        ›
+```
+
+**DANGER ZONE:**
+```
+[LogOut red]      Sign Out                  ›
+```
+
+---
+
+## ADDITIONAL SCREENS (accessible from Me tab or nav actions)
+
+### Edit Profile Screen
+App bar: Back arrow + "Edit Profile"
+Fields:
+- Profile Photo (with camera button, edit/remove options)
+- Full Name
+- Designation
+- Phone (with +91 prefix, note: "Requires verification")
+- Email (note: "Requires verification")
+- Organization Name (read-only if auto-linked)
+- Organization Address
+
+Bottom: "Save Changes" blue button
+
+---
+
+### Notification Preferences Screen (NEW — not in current UI)
+App bar: Back arrow + "Notification Preferences"
+
+Toggle rows (each: label + description text-xs slate-500 + Toggle switch right):
+```
+TRIAL ALERTS
+[toggle ON]   Trial shared with site
+              When a trial is assigned to a new site
+
+[toggle ON]   Schedule updated  
+              When a visit schedule is modified
+
+[toggle ON]   Enrollment milestone
+              When 25%, 50%, 75%, 100% targets are reached
+
+SITE ALERTS  
+[toggle ON]   Site activated/deactivated
+              Status changes at assigned sites
+
+[toggle ON]   Overdue visit alerts
+              When site has visits outside the window
+
+SYSTEM
+[toggle ON]   Push notifications
+[toggle ON]   Email notifications
+[toggle OFF]  SMS notifications
+```
+
+---
+
+### Team Members Screen (NEW — not in current UI)
+App bar: Back arrow + "Team Members" + Plus icon (invite)
+
+Filter: `All` `Admins` `Users` `CROs` `Pending`
+
+Member cards:
+```
+[Avatar]  Full Name              [Admin badge]
+          designation@org.com
+          Last active: 2h ago    [Active ●]
+```
+Tap → member detail with: role, access level, trials assigned, action buttons (Edit Role / Deactivate / Resend Invite)
+
+"+ Invite Team Member" blue button (bottom sticky) → modal:
+```
+Email *         [input]
+Role            [Admin / User toggle]
+Assign Trials   [multi-select]
+[Send Invitation]
+```
+
+---
+
+### Documents Screen (NEW — not in current UI)
+App bar: Back arrow + "Documents" + Upload icon
+
+Filter tabs: `All` `Protocols` `PIS` `Reports` `Other`
+
+Document cards:
+```
+[FileText icon]  Protocol-001_v2.pdf          12 May 2025
+                 Protocol Document · 2.4 MB
+                 Uploaded by: Rajesh Kumar
+                 [Download ↓]   [Share →]
+```
+
+"+ Upload Document" blue FAB (bottom right):
+- Opens file picker
+- Shows: Document Type dropdown + Trial Assignment dropdown + upload area
+
+---
+
+### Recruitment Reports Screen (NEW — not in current UI)
+App bar: Back arrow + "Reports"
+
+Report Type selector (tab pills):
+`Enrollment` `Visit Compliance` `Screen Fail` `Timeline`
+
+Date Range row: "Last 30 days ▾" dropdown
+
+**Enrollment Report view:**
+- Summary stats row: Total Screened / Enrolled / Completed / Withdrawn
+- Bar chart: per-site enrollment comparison (Apollo Mumbai vs Max Delhi vs Fortis Bangalore)
+- Line chart: enrollment over time (week by week)
+- Per-trial breakdown table
+
+Export row: "Export as" + [PDF button] [Excel button]
+
+---
+
+## MOCK DATA (use throughout)
+
+```javascript
+const mockData = {
+  user: {
+    name: "Rajesh Kumar",
+    initials: "RK",
+    role: "Sponsor Admin",
+    org: "PharmaCo Ltd",
+    email: "rajesh.kumar@pharmaco.com",
+    phone: "+91 98765 43210"
+  },
+  trials: [
+    {
+      id: "Protocol-001",
+      name: "Diabetes Phase II",
+      phase: "Phase II",
+      indication: "Type 2 Diabetes",
+      sponsor: "PharmaCo Ltd",
+      status: "Active",
+      sites: 3,
+      screened: 48,
+      enrolled: 45,
+      target: 100,
+      completed: 12,
+      screenFail: 8,
+      withdrawn: 3,
+      scheduleVersion: "v3",
+      lastModified: "12 May 2025",
+      modifiedBy: "Dr. Sharma"
+    },
+    {
+      id: "Protocol-002",
+      name: "Hypertension Study",
+      phase: "Phase III",
+      indication: "Hypertension",
+      sponsor: "PharmaCo Ltd",
+      status: "Active",
+      sites: 2,
+      screened: 32,
+      enrolled: 28,
+      target: 60,
+      completed: 5,
+      screenFail: 4,
+      withdrawn: 1,
+      scheduleVersion: "v1",
+      lastModified: "8 May 2025",
+      modifiedBy: "Dr. Rao"
+    },
+    {
+      id: "Protocol-003",
+      name: "Oncology Phase I",
+      phase: "Phase I",
+      indication: "NSCLC",
+      sponsor: "PharmaCo Ltd",
+      status: "Completed",
+      sites: 1,
+      screened: 20,
+      enrolled: 18,
+      target: 20,
+      completed: 18,
+      screenFail: 2,
+      withdrawn: 0
+    }
+  ],
+  sites: [
+    {
+      id: "SITE-001",
+      name: "Apollo Mumbai",
+      hospital: "Apollo Hospitals Mumbai",
+      city: "Mumbai",
+      state: "Maharashtra",
+      status: "Active",
+      pi: "Dr. Rajesh Sharma",
+      piEmail: "r.sharma@apollo.com",
+      piPhone: "+91 98100 12345",
+      crc: "Ms. Priya Desai",
+      enrolled: 72,
+      target: 85,
+      enrollmentPct: 85,
+      trials: ["Protocol-001", "Protocol-002"],
+      patients: 72,
+      visitCompliance: 89,
+      overdueVisits: 3
+    },
+    {
+      id: "SITE-002",
+      name: "Max Delhi",
+      hospital: "Max Super Speciality Hospital",
+      city: "New Delhi",
+      state: "Delhi",
+      status: "Active",
+      pi: "Dr. Sunita Rao",
+      piEmail: "s.rao@maxhealthcare.com",
+      piPhone: "+91 98200 23456",
+      crc: "Mr. Amit Singh",
+      enrolled: 43,
+      target: 60,
+      enrollmentPct: 72,
+      trials: ["Protocol-001"],
+      patients: 43,
+      visitCompliance: 94,
+      overdueVisits: 1
+    },
+    {
+      id: "SITE-003",
+      name: "Fortis Bangalore",
+      hospital: "Fortis Hospital Bangalore",
+      city: "Bengaluru",
+      state: "Karnataka",
+      status: "Active",
+      pi: "Dr. Anand Krishnan",
+      piEmail: "a.krishnan@fortishealthcare.com",
+      piPhone: "+91 98300 34567",
+      crc: "Ms. Kavitha Nair",
+      enrolled: 32,
+      target: 50,
+      enrollmentPct: 65,
+      trials: ["Protocol-001"],
+      patients: 32,
+      visitCompliance: 87,
+      overdueVisits: 2
+    }
+  ],
+  notifications: [
+    { id: 1, type: "trial", title: "Protocol-002 shared with Apollo Mumbai", message: "Hypertension Study has been assigned to the site. PI Dr. Sharma has been notified.", time: "2h ago", unread: true },
+    { id: 2, type: "milestone", title: "Recruitment milestone reached", message: "Protocol-001: 50% enrollment target achieved. 45 of 100 patients enrolled.", time: "5h ago", unread: true },
+    { id: 3, type: "overdue", title: "Site visit overdue — Apollo Mumbai", message: "3 visits are currently outside the scheduled visit window. Review required.", time: "1d ago", unread: false },
+    { id: 4, type: "site", title: "Site activation confirmed", message: "Max Delhi site is now active for Protocol-001. Enrollment can begin.", time: "2d ago", unread: false },
+    { id: 5, type: "system", title: "Schedule updated — Protocol-001", message: "Visit schedule v3 uploaded by Dr. Sharma. 18 visits confirmed.", time: "3d ago", unread: false }
+  ]
+}
+```
+
+---
+
+## STATE MANAGEMENT
+
+```javascript
+// App state
+const [activeTab, setActiveTab] = useState('dashboard') // dashboard | trials | sites | notifs | me
+const [currentScreen, setCurrentScreen] = useState('main') // main | trialDetail | siteDetail | addTrial | addSite | editProfile | notifPrefs | teamMembers | documents | reports
+
+// Per-tab state
+const [selectedTrial, setSelectedTrial] = useState(null)
+const [selectedSite, setSelectedSite] = useState(null)
+const [trialFilter, setTrialFilter] = useState('All')
+const [siteFilter, setSiteFilter] = useState('All')
+const [notifFilter, setNotifFilter] = useState('All')
+const [searchQuery, setSearchQuery] = useState('')
+```
+
+Navigation logic:
+- Tapping bottom nav tab always returns to that tab's main list screen
+- Back arrow in detail screens returns to tab main screen (not previous tab)
+- Quick actions on Dashboard ("+ Add Trial") navigate to Trials tab + open Add Trial screen
+- "See All ›" on Dashboard Recruitment → switches to Trials tab
+- "View All ›" on Dashboard Site Performance → switches to Sites tab
+
+---
+
+## INTERACTIONS & ANIMATIONS
+
+- Tab switch: instant (no animation needed, feels native)
+- Screen push (Detail screens): slide in from right (translateX 100% → 0, 200ms ease-out)
+- Bottom sheet: slide up from bottom (translateY 100% → 0, 250ms ease-out) + backdrop
+- Card tap: scale(0.98) press effect, 100ms
+- Progress bars: animate width from 0 on screen mount (500ms ease-out)
+- KPI numbers: count up animation from 0 on dashboard mount
+- Notification dot: pulse animation (scale 1 → 1.2 → 1, repeat)
+- Empty states: each tab has an empty state:
+  - Trials: FlaskConical icon + "No trials yet" + "Add your first trial" button
+  - Sites: MapPin icon + "No sites yet" + "Add a site" button
+  - Notifs: Bell icon + "You're all caught up!"
+- Loading skeleton: gray animated placeholder bars matching card shapes
+
+---
+
+## CRITICAL CONSTRAINTS
+
+1. **Sponsors NEVER see individual patient records** — only aggregate counts and percentages
+2. **Patient-level data** is always shown as totals only (e.g., "45 enrolled", not a patient list)
+3. Show an info banner wherever patient counts appear: slate-50 bg, Info icon, "Patient records are managed by site investigators"
+4. The old "Patients" tab is completely removed — do not add it back
+5. The old "Calendar" tab is completely removed — visit schedule access is inside Trial Detail only
+6. All phone number display: mask if shown in lists (e.g. "+91 981XX XX345")
+7. All screens must work with the mock data above — no empty screens
+
+Build all screens in a single React component file with internal state-based routing. Every button must navigate or trigger a visible state change. Include the full bottom nav on all main tab screens, hide it on detail/modal screens.
+
+
+
+# v0.dev Prompt: PI / Investigator Dashboard — Full Improved Implementation
+
+## PASTE THIS ENTIRE PROMPT INTO v0.dev
+
+---
+
+Build a complete **Principal Investigator (PI) / Investigator mobile app** in React with Tailwind CSS. This covers the full investigator workflow: dashboard → patient management → visit tracking → calendar → notifications → profile. Every screen must be fully interactive with working navigation.
+
+Mobile-first, 390px max-width centered on desktop. Use `lucide-react` for all icons.
+
+---
+
+## DESIGN SYSTEM
+
+```
+Primary navy:     #0D1B3E
+Medium blue:      #1E3A6E
+Action blue:      #2563EB
+Teal (complete):  #0D9488
+Red (overdue):    #DC2626
+Amber (warning):  #F59E0B
+Green (ok):       #16A34A
+Purple (eCRF):    #7C3AED
+Background:       #F8FAFC
+Card:             #FFFFFF
+Text primary:     #0F172A
+Text secondary:   #64748B
+Border:           #E2E8F0
+```
+
+Global rules:
+- Cards: `bg-white rounded-2xl border border-slate-100 shadow-sm p-4`
+- Primary button: `bg-[#2563EB] text-white rounded-xl py-3 px-5 font-semibold text-sm w-full`
+- Amber action button: `bg-[#F59E0B] text-white rounded-xl py-3 px-5 font-semibold text-sm w-full`
+- Outlined button: `border-2 border-[#2563EB] text-[#2563EB] rounded-xl py-3 px-5 font-semibold text-sm`
+- Danger button: `bg-[#DC2626] text-white rounded-xl py-3 px-5 font-semibold text-sm` — ONLY for destructive/irreversible actions
+- Status badge: `rounded-full px-3 py-1 text-xs font-semibold`
+- Section label: `text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2`
+- Input: `border border-slate-200 rounded-xl px-4 py-3 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500`
+- Bottom nav: 64px height, white bg, `border-t border-slate-100`
+- App bar: 60px height
+
+---
+
+## BOTTOM NAVIGATION (persistent on all main tab screens)
+
+5 tabs — hide bottom nav on all detail/pushed screens:
+
+| Tab | Icon | Label | Active |
+|-----|------|-------|--------|
+| Dashboard | `LayoutDashboard` | Dashboard | #2563EB |
+| My Patients | `Users` | My Patients | #2563EB |
+| Calendar | `CalendarDays` | Calendar | #2563EB |
+| Notifs | `Bell` | Notifs | #2563EB |
+| Me | `User` | Me | #2563EB |
+
+Active: icon + label `#2563EB`. Inactive: `#94A3B8`.
+Bell tab: red dot badge with count "2" when unread exist.
+
+---
+
+## SCREEN 1: DASHBOARD TAB
+
+### App Bar
+- Left: Two lines:
+  - Line 1: "Investigator Dashboard" bold 17px navy
+  - Line 2: "Mon, 19 May 2025" text-sm slate-500
+- Right: Bell icon (red badge "2") + Avatar circle "DR" navy bg white text
+
+### Protocol Context Selector (NEW — was missing)
+Below app bar, full-width pill selector:
+```
+[Protocol-A  Diabetes Ph.II  ▾]
+```
+- Teal left border accent, slate-50 bg, rounded-xl, py-2 px-4
+- ChevronDown icon right
+- Tap → bottom sheet with protocol list:
+  ```
+  ● Protocol-A   Diabetes Phase II      Active
+  ● Protocol-B   Hypertension Study     Active
+  ● Protocol-C   Oncology Phase I       Active
+  ```
+  Each row selectable — updates all dashboard data to that protocol's context
+- "All Protocols" option at top of list
+
+### KPI Cards Row
+Horizontal scroll — 4 cards (show 3.2 to hint scroll), min-w-[100px] each:
+
+```
+Card 1 — Patients
+  Icon: Users (blue-100 bg)
+  Number: 12  bold 26px
+  Label: "Patients"  slate-500 12px
+  Sub: "10 active · 2 screen fail"  slate-400 10px
+
+Card 2 — Today  ← HIGHLIGHTED (navy bg white text)
+  Icon: CalendarCheck (white)
+  Number: 3  bold 26px
+  Label: "Today"  white 12px
+  Sub: "2 scheduled · 1 screening"  blue-200 10px
+
+Card 3 — Overdue  ← TAPPABLE → jumps to Attention Needed section
+  Icon: AlertTriangle (red-100 bg, red icon)
+  Number: 2  bold 26px red
+  Label: "Overdue"  slate-500 12px
+  Sub: "Tap to review"  red 10px
+  Pulsing red dot top-right corner
+
+Card 4 — This Week  (NEW)
+  Icon: CalendarDays (purple-100 bg, purple icon)
+  Number: 9  bold 26px
+  Label: "This Week"  slate-500 12px
+  Sub: "Mon–Fri"  slate-400 10px
+```
+
+### Week-at-a-Glance Strip (NEW — was missing)
+Thin horizontal strip of 5 day pills:
+
+```
+Mon    Tue    Wed    Thu    Fri
+ 2      0      3      1      3
+19     20     21     22     23
+```
+
+- Each pill: day name 10px slate-400 + visit count bold 14px + date 10px
+- Today (Mon): navy bg, white text, rounded-xl
+- Days with 0 visits: slate-100 bg, slate-300 text
+- Days with visits: white bg, border slate-200
+- Tap any day pill → switches to Calendar Day view for that date
+
+### Today's Visits Section
+Header row: "Today's Visits" bold 15px + "View All ›" blue link (→ Calendar tab, day view)
+
+**Visit card** (white, rounded-2xl, border-l-4 for status color, p-4, mb-3):
+
+```
+[SUBJ-001]  Protocol-A              [🏥]  [Scheduled]
+Visit 3  ·  🕐 09:00
+Window: 17–24 May 2025
+                              [✓ Mark Complete]
+```
+
+Card anatomy:
+- Top row: Subject ID bold blue + Protocol chip slate-100 + Visit type icon right (Building2=Hospital, Phone=Telephonic, Home)
+- Second row: Visit name + number + Clock icon + time
+- Third row: CalendarRange icon + window dates — `text-xs text-slate-500` — **THIS IS NEW AND REQUIRED**
+- Bottom row: "Mark Complete" button — teal outlined, text-xs, rounded-lg, py-1 px-3 — right aligned
+- Left border color: blue=Scheduled, amber=Screening, teal=Completed, red=Overdue
+- Tap anywhere on card (not button) → Visit Detail screen
+
+Show 3 visit cards for today:
+```
+SUBJ-001  Protocol-A  Visit 3   09:00  Scheduled   Hospital  Window: 17–24 May
+SUBJ-007  Protocol-B  Visit 1   11:30  Screening   Hospital  Window: 15–22 May
+SUBJ-011  Protocol-A  Visit 5   14:00  Scheduled   Phone     Window: 18–25 May
+```
+
+### Attention Needed Section (FIXED)
+Header: amber AlertTriangle icon + "Attention Needed" bold 15px
+
+**Overdue card** — show ALL overdue patients, not just one:
+
+```
+[Red left border card]
+SUBJ-003  Protocol-C              4 days overdue
+Visit 5 · Window closed 15 May 2025
+⚠ Protocol deviation risk if not resolved
+
+                    [Review & Update →]
+```
+
+- Header row: Subject ID bold + Protocol chip + "X days overdue" RED text right
+- Second row: Visit name + "Window closed [date]"  text-xs red-400
+- Third row: amber warning text "Protocol deviation risk if not resolved" text-xs
+- Button: "Review & Update →" — AMBER filled (NOT red — red is for destructive), rounded-xl, py-2 px-4 text-sm right-aligned
+- Tap button → Visit Detail screen for that patient
+
+Show 2 overdue cards (matching the KPI count of 2):
+```
+SUBJ-003  Protocol-C  Visit 5   4 days overdue  Window closed 15 May
+SUBJ-009  Protocol-A  Visit 7   1 day overdue   Window closes today
+```
+
+### Pending eCRF Section (NEW — was completely missing)
+Header: purple FileEdit icon + "Pending eCRF Entries" bold 15px + red count badge "3"
+
+```
+[Purple-50 bg card, purple-left border]
+3 visits completed but eCRF not yet submitted
+
+  SUBJ-001  Visit 2  Completed 14 May
+  SUBJ-007  Visit 1  Completed 17 May
+  SUBJ-003  Visit 4  Completed 18 May
+
+              [Open eCRF Portal →]
+```
+
+- Purple-50 background (#F5F3FF), purple left border
+- List rows: Subject ID + Visit + completion date — text-sm
+- "Open eCRF Portal →" purple filled button, rounded-xl
+
+### Medication Compliance Snapshot (NEW — was missing)
+Header: Pill icon + "Today's Medication Compliance" bold 15px
+
+```
+[White card with teal top border]
+  8 / 12  patients reported medication taken
+  ████████░░░░  67%
+
+  ✓ Taken: 8    ✗ Not reported: 4
+```
+
+- Progress bar: teal fill, slate-100 track, h-2, rounded-full
+- Two stat pills: "✓ Taken: 8" teal-100 teal text + "✗ Not reported: 4" amber-100 amber text
+- "View Details ›" blue link right → Patient List filtered to medication non-compliant
+
+### Screening Pipeline (NEW — was missing)
+Header: UserPlus icon + "This Week's Screening" bold 15px
+
+```
+[White card]
+Screened  →  Passed  →  Failed
+   5             3          2
+
+[Mini horizontal funnel visualization]
+```
+
+- 3 stats in a row with arrow separators
+- Screened: slate number, Passed: teal number, Failed: red number
+- Mini funnel: 3 colored bars decreasing in width
+
+### FAB Speed Dial (FIXED)
+Blue FAB (+) bottom-right, above nav bar
+
+Tap FAB → expands upward into speed dial (3 options with labels):
+```
+    [Record Deviation]  ← red circle, AlertOctagon icon
+    [Log Visit]         ← teal circle, ClipboardCheck icon
+    [Add Patient]       ← blue circle, UserPlus icon
+  [✕]                   ← FAB becomes X to close
+```
+Each option: colored circle icon + label text right — slides up with stagger animation
+Backdrop overlay (semi-transparent) when open — tap outside to close
+- Add Patient → Add Patient screen
+- Log Visit → Visit Detail (blank/new)
+- Record Deviation → Protocol Deviation form screen (NEW)
+
+---
+
+## SCREEN 2: MY PATIENTS TAB
+
+### App Bar
+- "My Patients" title centered bold 17px
+- Right: Filter icon (SlidersHorizontal) + Plus circle blue → Add Patient screen
+
+### Summary Row
+2 stat pills side by side:
+```
+[Users icon]  12 Total    [UserCheck icon]  10 Active
+```
+
+### Search Bar
+Full width: Search icon + "Search by Subject ID, name..." + mic icon right
+
+### Filter Chips (horizontal scroll)
+`All (12)` `Active (10)` `Screening (2)` `Screen Fail (2)` `Withdrawn (1)` `Overdue (2)`
+
+Active chip: blue bg white text. Others: white bg slate-200 border.
+
+### Patient Cards (scrollable list)
+
+**Card anatomy** (white, rounded-2xl, border, p-4, mb-3):
+```
+[PS avatar]  SUBJ-001  Priya S.           [● Active]
+             Protocol-A · Visit 7 of 10
+             Next: Follow-Up 3 · 28 May
+             Window: 25 May – 1 Jun        [›]
+```
+
+- Avatar circle: 40px, colored bg per patient, bold initials white
+- Subject ID bold 14px + patient initials/name text-sm slate-600
+- Protocol chip + "Visit X of Y" progress text-xs slate-500
+- Next visit name + date text-sm
+- Window dates text-xs slate-400 with CalendarRange icon — NEW
+- Status badge top-right
+- ChevronRight right edge
+
+Status badge colors:
+- Active: teal-100 teal-700 text
+- Overdue: red-100 red-700 text
+- Screening: amber-100 amber-700 text
+- Screen Fail: red-100 red-700 text
+- Withdrawn: slate-100 slate-600 text
+- Completed: green-100 green-700 text
+
+Show patients:
+```
+SUBJ-001  Priya S.    Protocol-A  Active     Visit 7/10  Next: 28 May
+SUBJ-003  Anand K.    Protocol-C  Overdue    Visit 5/8   Overdue 4 days
+SUBJ-007  Meena R.    Protocol-B  Screening  Visit 1/12  Today 11:30
+SUBJ-009  Vijay T.    Protocol-A  Overdue    Visit 7/10  Overdue 1 day
+SUBJ-011  Sonal P.    Protocol-A  Active     Visit 5/10  Next: 21 May
+SUBJ-014  Rajan M.    Protocol-B  Active     Visit 3/12  Next: 25 May
+```
+
+Tap card → Patient Timeline Screen
+
+### Patient Timeline Screen (pushed, back arrow)
+
+**App bar:** Back arrow + "SUBJ-001" title + MoreVertical (options menu)
+
+**Header card** (navy bg, white text, rounded-2xl, p-5):
+```
+SUBJ-001  ·  Priya S.               [● Active]
+Protocol-A  ·  Diabetes Phase II
+PI: Dr. Rajesh Kumar  ·  Apollo Mumbai
+
+Visit Progress:  ████████░░  7 / 10
+                 70% complete
+```
+
+**Contact row** (below header, white card):
+```
+[Phone icon button]  +91 98100 ****  [Message icon button]
+```
+Masked phone number, tap phone → initiate call, tap message → chat
+
+**Visit Timeline** (vertical timeline, scrollable):
+Each visit row:
+```
+● [teal]   Visit 1 — Screening          14 Jan 2025   Completed
+           Hospital · Dr. Rajesh Kumar  eCRF ✓
+
+● [teal]   Visit 2 — Baseline           1 Feb 2025    Completed
+           Hospital                     eCRF ✗ pending  ← purple warning
+
+● [blue]   Visit 3 — Follow-Up 1        15 Feb 2025   Scheduled
+           Window: 12–18 Feb
+
+● [amber]  Visit 7 — Follow-Up 5        28 May 2025   Upcoming
+           Window: 25 May – 1 Jun
+
+○ [slate]  Visit 8–10                   Future visits
+```
+
+- Left vertical line connecting dots
+- Completed: filled teal circle
+- Upcoming/Scheduled: filled blue circle
+- Overdue: filled red pulsing circle
+- Future: empty slate circle
+- eCRF status shown per completed visit: "eCRF ✓" teal or "eCRF pending" purple badge
+- Tap any visit row → Visit Detail screen
+
+**Medication Compliance card:**
+```
+Medication Adherence   Last 30 days
+████████████░   87%
+Taken: 26/30 days
+```
+
+**Quick Actions row:**
+```
+[Log Visit]  [Send Message]  [View Documents]
+```
+
+---
+
+## SCREEN 3: VISIT DETAIL SCREEN (pushed from anywhere)
+
+### App Bar
+Back arrow + "Visit Detail" title + Edit icon (pencil, top right)
+
+### Visit Info Card (navy bg, white text, rounded-2xl, p-5)
+```
+Follow-Up Visit 3                     [Scheduled]
+SUBJ-001  ·  Priya S.
+Protocol-A  ·  Apollo Mumbai
+
+📅  28 May 2025  ·  09:00 AM
+🪟  Window: 25 May – 1 Jun 2025       ← REQUIRED
+🏥  Hospital Visit
+👤  PI: Dr. Rajesh Kumar
+```
+
+**Window Alert Banner** (shows when today is outside window):
+```
+[⚠ amber banner]
+Today is outside the visit window (closed 15 May).
+This may constitute a protocol deviation.
+```
+Shows only when applicable — amber-50 bg, amber-600 text, amber border, rounded-xl, p-3
+
+### Visit Status Selector (2×3 grid)
+Label: "Visit Status" section header
+
+6 status cards (each ~45% width, rounded-xl, border, p-3, center-aligned):
+```
+[✓] Completed    [📅] Scheduled    [✓] Screen Pass
+[✗] Screen Fail  [←] Withdrawn    [⬚] Drop Out
+```
+
+Selected card: blue border-2 + blue-50 bg + blue CheckCircle badge top-right
+Unselected: slate-100 border, white bg
+
+### Clinical Tasks Section
+Label: "Clinical Tasks" section header
+
+Checklist (each row: Checkbox + icon + task name + optional time field):
+```
+☐  [Activity]    Vital signs          [Time: ____]
+☐  [Droplets]    Blood draw           [Time: ____]
+☐  [Heart]       ECG                  [Time: ____]
+☐  [Stethoscope] Physical exam
+☐  [Eye]         Visual acuity
+```
+
+Checked state: checkbox teal, task name with strikethrough, row bg teal-50
+Time fields: small inline input "HH:MM" — appears for Vital signs, Blood draw, ECG
+
+### Admin Tasks Section
+Label: "Admin Tasks — PI/CRC Only" section header + Lock icon
+
+```
+☐  [FileEdit]    eCRF entry                    [purple badge if pending]
+☐  [FileCheck]   Informed consent verification
+☐  [Camera]      Photo documentation
+☐  [Package]     Investigational product dispensing
+☐  [RotateCcw]   IP return / accountability
+```
+
+eCRF row: if not checked, show purple "Pending" badge right — matches dashboard warning
+
+### Comments / Notes Section
+Textarea: "Add clinical notes, observations, deviations..." 4 rows
+Character count: "0/500" bottom right
+
+### Protocol Deviation Flag (NEW — was missing)
+Toggle row:
+```
+[AlertOctagon red icon]  Flag as Protocol Deviation   [Toggle OFF]
+```
+When toggled ON → expands sub-form:
+```
+Deviation Type:   [dropdown: Minor / Major / Critical]
+Description:      [textarea]
+Immediate Action: [textarea]
+Report to Sponsor: [toggle]
+```
+Red-50 bg section when expanded
+
+### Document Upload (NEW — was missing)
+Row: Paperclip icon + "Attach visit documents" + Upload icon button
+Tap → file picker: accept PDF, images
+Shows uploaded files as chips: "visit_report.pdf ✓ ✗"
+
+### Sticky Bottom Bar
+```
+[Cancel]              [Update Visit Status →]
+```
+- Cancel: slate outlined
+- Update: blue filled, full flex-1
+- Disabled state: gray when no status selected
+- On tap Update: success animation (checkmark bounce) → navigate back to dashboard/patient list
+
+---
+
+## SCREEN 4: ADD PATIENT SCREEN (from FAB → Add Patient)
+
+### App Bar
+Back arrow + "Add Patient"
+
+### Form Sections
+
+**Patient Information:**
+```
+Subject Number/ID *   [SUBJ-  _____]   ← prefilled prefix
+Subject Initials      [  ]
+Full Name *           [              ]
+Date of Birth         [date picker    ]
+Gender                [dropdown: Male/Female/Other/Prefer not to say]
+Phone * (+91)         [__________    ]
+Email                 [              ]
+Preferred Language    [dropdown: English/Hindi/Tamil/Telugu]
+```
+
+**Trial Assignment:**
+```
+Assign to Trial *     [dropdown]
+  ● Protocol-A  Diabetes Phase II
+  ● Protocol-B  Hypertension Study
+  ● Protocol-C  Oncology Phase I
+```
+
+**Invitation Settings:**
+```
+[Send invitation to patient]    [Toggle ON — default]
+Send via:  [SMS ✓]  [Email ✓]  (multi-select toggles)
+```
+Amber info box when toggle ON: "Patient will receive an invitation link to register on the app"
+
+**Visit Dates:**
+Section header: CalendarDays icon + "Visit Schedule"
+```
+Baseline Date *      [date picker with calendar icon]
+```
+
+Auto-calculated dates card (shows after baseline selected):
+- Sparkle icon, blue-50 bg, rounded-xl, p-4
+- "Auto-calculated from protocol schedule" label
+- List: Visit 1: 1 Jan 2025 · Visit 2: 15 Jan 2025 · Visit 3: 29 Jan 2025
+- "View all 18 visits ›" expandable blue link
+
+**Sticky bottom:**
+```
+[Cancel]    [Add Patient →]
+```
+
+---
+
+## SCREEN 5: PROTOCOL DEVIATION FORM (from FAB → Record Deviation)
+
+### App Bar
+Back arrow + "Record Protocol Deviation"
+
+### Warning Banner
+Red-50 bg, red border, rounded-xl, p-3:
+"Protocol deviations must be reported as per ICH-GCP E6(R2) guidelines. Ensure sponsor notification within the required timeframe."
+
+### Form Fields
+```
+Patient (Subject ID) *    [dropdown of enrolled patients]
+Protocol *                [auto-fills from patient selection]
+Visit *                   [dropdown of visits for that patient]
+
+Deviation Type *
+  ○ Minor
+  ○ Major  
+  ○ Critical
+
+Deviation Date *          [date picker]
+Discovery Date *          [date picker]
+
+Description *             [textarea, 6 rows]
+"Describe what happened and why the deviation occurred"
+
+Immediate Action Taken *  [textarea, 4 rows]
+"Describe corrective action taken"
+
+Preventive Measures       [textarea, 3 rows]
+"How will this be prevented in future?"
+
+─── Reporting ───
+[✓] Report to Sponsor     [Toggle]
+[✓] Report to IRB/IEC     [Toggle]
+    Sponsor notified by:  [date picker]
+    
+─── Attachments ───
+[+ Add Supporting Document]
+```
+
+### Sticky bottom:
+```
+[Save as Draft]    [Submit Deviation Report →]
+```
+Submit button: red filled (this is appropriate here — it's a serious irreversible regulatory action)
+
+---
+
+## SCREEN 6: CALENDAR TAB
+
+### App Bar
+"Schedule" title centered + left/right month arrows + Sync icon + Settings icon
+
+### View Toggle
+`Day` `Week` `Month` — pill style, today's view highlighted blue
+
+### Month View (default)
+
+7-column calendar grid:
+- Day headers: S M T W T F S  slate-500 text-xs
+- Date cells: number centered
+- Today: blue-100 rounded-full bg
+- Selected: solid blue rounded-full, white text
+- Event dots below dates:
+  - Blue dot: scheduled visits
+  - Teal dot: completed visits
+  - Red dot: overdue visits
+  - Purple dot: eCRF pending
+
+Below calendar: selected day visit list (same card style as dashboard Today's Visits)
+
+### Week View (NEW)
+
+Header: "19 – 25 May 2025" + nav arrows
+
+7-column grid, each column = 1 day:
+- Day name + date at top
+- Time slots 07:00–18:00 (hourly rows)
+- Visit blocks at their time:
+  ```
+  Protocol-A    SUBJ-001
+  Visit 3       09:00
+  ```
+  Color coded by status (blue/teal/red/amber)
+
+### Day View
+
+Vertical time grid 07:00–18:00:
+Visit blocks positioned at time:
+```
+09:00  [blue block]   Protocol-A · SUBJ-001 · Visit 3 · Follow-Up · Hospital
+11:30  [amber block]  Protocol-B · SUBJ-007 · Visit 1 · Screening  · Hospital
+14:00  [blue block]   Protocol-A · SUBJ-011 · Visit 5 · Follow-Up  · Phone
+```
+Tap block → Visit Detail screen
+
+---
+
+## SCREEN 7: NOTIFICATIONS TAB
+
+### App Bar
+"Notifications" bold 17px + "Mark All Read" blue text button right
+
+### Filter Chips
+`All` `Visits` `Overdue` `eCRF` `Medication` `System`
+
+### Notification List (grouped by date)
+
+Date headers: "Today" / "Yesterday" — text-xs slate-400 with horizontal lines
+
+**Notification card** (white, rounded-xl, border, p-3, mb-2):
+```
+● [icon circle]  Title bold 14px                    2h ago
+                 Message preview 2 lines slate-500 13px
+```
+
+Unread: blue dot + slate-50 bg
+Read: no dot, white bg
+
+Notification types:
+```
+● [red AlertTriangle]    SUBJ-003 — Visit overdue              2h ago
+                         Visit 5 was due 4 days ago. Window closed 15 May.
+
+● [purple FileEdit]      eCRF pending — SUBJ-001               5h ago
+                         Visit 2 completed 14 May. eCRF not yet submitted.
+
+● [teal Check]           SUBJ-007 Visit 1 completed            1d ago
+                         Screening visit marked complete. Next: Visit 2 on 1 Jun.
+
+● [blue Bell]            Protocol-D assigned to your site      2d ago
+                         Oncology Phase II added. 30 patients target.
+
+  [amber Pill]           Medication non-compliance — SUBJ-011  3d ago
+                         Patient reported medication not taken on 18 May.
+```
+
+Swipe left → red Delete button (trash icon)
+Tap card → Notification Detail bottom sheet:
+- Full message + timestamp
+- Action button: "View Visit" / "Open eCRF" / "View Patient" (contextual, blue)
+- "Dismiss" gray + "Stop this reminder" amber link
+
+---
+
+## SCREEN 8: ME TAB (Profile & Settings)
+
+### Profile Header
+- Avatar 72px, navy bg, "DR" white initials, Camera badge bottom-right
+- "Dr. Rajesh Kumar" bold 18px
+- "Principal Investigator" blue chip
+- "Apollo Mumbai · Protocol-A, B, C" slate-500 text-sm with Building2 icon
+
+### Account Info Card
+```
+Email         r.kumar@apollo.com
+Phone         +91 98765 ****10
+Site          Apollo Hospitals Mumbai
+Trials        3 active trials
+Member since  Jan 2024
+```
+Edit icon (pencil, blue) → Edit Profile screen
+
+### Menu Sections
+
+**ACCOUNT:**
+```
+[UserPen]    Edit Profile              ›
+[Lock]       Change Password           ›
+[Bell]       Notification Preferences  ›
+```
+
+**MY WORK:**
+```
+[Users]          My Patients           ›  → My Patients tab
+[CalendarDays]   My Schedule           ›  → Calendar tab
+[FileEdit]       Pending eCRF (3)      ›  ← purple badge count
+[AlertOctagon]   Protocol Deviations   ›  ← shows list of logged deviations
+[ClipboardList]  Visit Templates       ›  ← view/manage task checklists
+```
+
+**DELEGATION (NEW):**
+```
+[UserCheck]   My CRC Team              ›  ← NEW: manage CRC access
+[Shield]      Delegation Log           ›  ← audit trail of delegated tasks
+```
+
+**SUPPORT:**
+```
+[HelpCircle]      Help & FAQ           ›
+[MessageSquare]   Contact Support      ›
+[FileText]        Terms & Conditions   ›
+```
+
+**DANGER:**
+```
+[LogOut red]   Sign Out                ›
+```
+
+### Edit Profile Screen (pushed)
+Fields: Full Name, Designation, Phone (verify), Email (verify), Site, Medical Registration Number
+"Save Changes" blue button
+
+### Notification Preferences Screen (pushed)
+Toggles:
+```
+VISIT ALERTS
+[ON]  Upcoming visit reminders (24h before)
+[ON]  Visit window opening alert
+[ON]  Visit overdue alert
+[OFF] Visit window closing warning (1 day before close)
+
+eCRF ALERTS
+[ON]  eCRF pending reminder
+
+PATIENT ALERTS
+[ON]  Medication non-compliance
+[ON]  Patient message received
+
+SYSTEM
+[ON]  Push notifications
+[ON]  Email notifications
+[OFF] SMS notifications
+```
+
+### Protocol Deviations Screen (pushed from Me → Protocol Deviations)
+List of all logged deviations:
+```
+DEV-001  SUBJ-003  Visit 5    Minor     Submitted    14 May
+DEV-002  SUBJ-009  Visit 7    Major     Pending       18 May
+```
+
+Filter tabs: All / Pending / Submitted / Closed
+Tap row → full deviation detail (read-only once submitted)
+
+### CRC Team Screen (pushed from Me → My CRC Team)
+**NEW — required by delegation rules in requirements doc**
+
+List of CRC staff with access:
+```
+[Avatar]  Ms. Priya Desai           [CRC badge]
+          priya.desai@apollo.com
+          Access: Protocol-A, B
+          Last active: 2h ago        [Active ●]
+```
+
+Action buttons per member: Edit Access / Deactivate
+"+ Add CRC Member" blue button (bottom):
+→ modal: Name, Email, Role, Protocol Assignment, Access Level
+
+---
+
+## STATE MANAGEMENT
+
+```javascript
+const [activeTab, setActiveTab] = useState('dashboard')
+const [currentScreen, setCurrentScreen] = useState('main')
+// Screens: main | patientTimeline | visitDetail | addPatient | deviationForm
+//          calendarDay | calendarWeek | notifDetail | editProfile
+//          notifPrefs | deviations | crcTeam | pendingEcrf
+
+const [selectedProtocol, setSelectedProtocol] = useState('all') // 'all' | 'Protocol-A' | 'Protocol-B' | 'Protocol-C'
+const [selectedPatient, setSelectedPatient] = useState(null)
+const [selectedVisit, setSelectedVisit] = useState(null)
+const [calendarView, setCalendarView] = useState('month') // month | week | day
+const [fabOpen, setFabOpen] = useState(false)
+const [patientFilter, setPatientFilter] = useState('All')
+const [notifFilter, setNotifFilter] = useState('All')
+```
+
+Navigation rules:
+- Bottom nav taps always return to that tab's main list screen and reset `currentScreen` to 'main'
+- Back arrow: sets `currentScreen` to previous screen
+- FAB closes (setFabOpen(false)) whenever any navigation happens
+- Protocol selector updates: all KPI numbers, visit lists, patient lists filter to selected protocol
+- Overdue KPI card tap: scrolls dashboard to Attention Needed section (smooth scroll)
+
+---
+
+## MOCK DATA
+
+```javascript
+const mockData = {
+  pi: {
+    name: "Dr. Rajesh Kumar",
+    initials: "DR",
+    site: "Apollo Hospitals Mumbai",
+    protocols: ["Protocol-A", "Protocol-B", "Protocol-C"],
+    email: "r.kumar@apollo.com"
+  },
+  protocols: [
+    { id: "Protocol-A", name: "Diabetes Phase II",   indication: "Type 2 Diabetes" },
+    { id: "Protocol-B", name: "Hypertension Study",  indication: "Hypertension"   },
+    { id: "Protocol-C", name: "Oncology Phase I",    indication: "NSCLC"          }
+  ],
+  kpis: {
+    totalPatients: 12,
+    activePatients: 10,
+    screenFail: 2,
+    todayVisits: 3,
+    todayScheduled: 2,
+    todayScreening: 1,
+    overdueVisits: 2,
+    thisWeekVisits: 9,
+    pendingEcrf: 3
+  },
+  weekStrip: [
+    { day: "Mon", date: 19, visits: 2, isToday: true  },
+    { day: "Tue", date: 20, visits: 0, isToday: false },
+    { day: "Wed", date: 21, visits: 3, isToday: false },
+    { day: "Thu", date: 22, visits: 1, isToday: false },
+    { day: "Fri", date: 23, visits: 3, isToday: false }
+  ],
+  todayVisits: [
+    { subjectId: "SUBJ-001", protocol: "Protocol-A", visitName: "Follow-Up 3", visitNum: 3,
+      time: "09:00", status: "Scheduled", type: "Hospital", window: "17–24 May 2025" },
+    { subjectId: "SUBJ-007", protocol: "Protocol-B", visitName: "Screening",   visitNum: 1,
+      time: "11:30", status: "Screening", type: "Hospital", window: "15–22 May 2025" },
+    { subjectId: "SUBJ-011", protocol: "Protocol-A", visitName: "Follow-Up 5", visitNum: 5,
+      time: "14:00", status: "Scheduled", type: "Telephonic", window: "18–25 May 2025" }
+  ],
+  overduePatients: [
+    { subjectId: "SUBJ-003", protocol: "Protocol-C", visitName: "Visit 5",
+      daysOverdue: 4, windowClosed: "15 May 2025" },
+    { subjectId: "SUBJ-009", protocol: "Protocol-A", visitName: "Visit 7",
+      daysOverdue: 1, windowClosed: "today" }
+  ],
+  pendingEcrfList: [
+    { subjectId: "SUBJ-001", visitName: "Visit 2", completedDate: "14 May 2025" },
+    { subjectId: "SUBJ-007", visitName: "Visit 1", completedDate: "17 May 2025" },
+    { subjectId: "SUBJ-003", visitName: "Visit 4", completedDate: "18 May 2025" }
+  ],
+  medicationCompliance: { taken: 8, total: 12, pct: 67 },
+  screeningPipeline: { screened: 5, passed: 3, failed: 2 },
+  patients: [
+    { subjectId: "SUBJ-001", initials: "PS", name: "Priya S.",   protocol: "Protocol-A",
+      status: "Active",    visitProgress: "7/10", nextVisit: "Follow-Up 3", nextDate: "28 May", window: "25 May – 1 Jun" },
+    { subjectId: "SUBJ-003", initials: "AK", name: "Anand K.",   protocol: "Protocol-C",
+      status: "Overdue",   visitProgress: "5/8",  nextVisit: "Visit 5",     nextDate: "overdue", window: "closed 15 May" },
+    { subjectId: "SUBJ-007", initials: "MR", name: "Meena R.",   protocol: "Protocol-B",
+      status: "Screening", visitProgress: "1/12", nextVisit: "Screening",   nextDate: "Today",   window: "15–22 May" },
+    { subjectId: "SUBJ-009", initials: "VT", name: "Vijay T.",   protocol: "Protocol-A",
+      status: "Overdue",   visitProgress: "7/10", nextVisit: "Visit 7",     nextDate: "overdue", window: "closes today" },
+    { subjectId: "SUBJ-011", initials: "SP", name: "Sonal P.",   protocol: "Protocol-A",
+      status: "Active",    visitProgress: "5/10", nextVisit: "Follow-Up 5", nextDate: "21 May",  window: "18–25 May" },
+    { subjectId: "SUBJ-014", initials: "RM", name: "Rajan M.",   protocol: "Protocol-B",
+      status: "Active",    visitProgress: "3/12", nextVisit: "Follow-Up 1", nextDate: "25 May",  window: "22–29 May" }
+  ],
+  notifications: [
+    { id: 1, type: "overdue",   icon: "AlertTriangle", color: "red",
+      title: "SUBJ-003 — Visit overdue",
+      message: "Visit 5 was due 4 days ago. Window closed 15 May. Protocol deviation risk.",
+      time: "2h ago", unread: true, action: "View Visit" },
+    { id: 2, type: "ecrf",      icon: "FileEdit",      color: "purple",
+      title: "eCRF pending — SUBJ-001",
+      message: "Visit 2 completed 14 May. eCRF not yet submitted to the system.",
+      time: "5h ago", unread: true, action: "Open eCRF" },
+    { id: 3, type: "complete",  icon: "Check",         color: "teal",
+      title: "SUBJ-007 Visit 1 completed",
+      message: "Screening visit marked complete. Next visit: Visit 2 on 1 Jun 2025.",
+      time: "1d ago", unread: false, action: "View Patient" },
+    { id: 4, type: "trial",     icon: "Bell",          color: "blue",
+      title: "Protocol-D assigned to your site",
+      message: "Oncology Phase II has been added to Apollo Mumbai. 30 patients target.",
+      time: "2d ago", unread: false, action: "View Trial" },
+    { id: 5, type: "medication",icon: "Pill",          color: "amber",
+      title: "Medication non-compliance — SUBJ-011",
+      message: "Patient reported medication not taken on 18 May. Scheduled 8:00 PM.",
+      time: "3d ago", unread: false, action: "View Patient" }
+  ]
+}
+```
+
+---
+
+## INTERACTION & ANIMATION DETAILS
+
+- Dashboard scroll: smooth, all sections visible by scrolling down
+- Overdue KPI card tap: smooth scroll to Attention Needed section on same page
+- FAB speed dial: staggered slide-up for 3 options (50ms delay each), backdrop fades in
+- Week strip: horizontal scroll, today pill has blue bg, tap → switches Calendar to Day view
+- Visit card "Mark Complete" button: teal border + text, tap → shows inline success state (teal bg, "✓ Marked Complete" text, disabled) then updates status badge on card
+- Protocol selector: bottom sheet slides up, selected protocol highlighted with blue left border + checkmark
+- Progress bars: animate width on mount (600ms ease-out)
+- Status badges: consistent colors everywhere — never use red for an action button (only for status badges and truly destructive form submissions)
+- Skeleton loaders: gray animated bars matching each card shape — show for 800ms on screen mount
+- Empty states per section:
+  - No visits today: CalendarCheck icon + "No visits scheduled today. Enjoy your day!"
+  - No overdue: CheckCircle teal + "All visits on track."
+  - No eCRF pending: FileCheck icon + "All eCRFs up to date."
+- Window alert banner on Visit Detail: shows only when current date > window end date, amber-50 bg
+
+---
+
+## CRITICAL DESIGN RULES FOR THIS SCREEN
+
+1. Red `#DC2626` is ONLY used for:
+   - Status badges (Overdue)
+   - Overdue numbers in KPI cards
+   - "X days overdue" text labels
+   - Protocol Deviation submit button (regulatory, irreversible)
+   - Never used for action buttons that update visit status
+
+2. Amber `#F59E0B` is used for:
+   - "Review & Update" CTA on overdue cards
+   - Warning banners
+   - Screening status badges
+
+3. Purple `#7C3AED` is used exclusively for:
+   - eCRF-related elements (pending badge, eCRF section, notifications)
+   - Creates a distinct visual language patients and PIs learn quickly
+
+4. Visit window dates MUST appear on every visit card everywhere in the app —
+   dashboard cards, patient list cards, calendar blocks, visit detail header.
+   This is a GCP compliance requirement, not optional.
+
+5. The bottom nav keeps 5 tabs: Dashboard / My Patients / Calendar / Notifs / Me.
+   Do NOT add or remove tabs from this set for the PI role.
+
+Build all screens in a single React component file with internal state routing.
+Every button must navigate or trigger a visible state change.
+Include the bottom nav on all 5 main tab screens, hide it on all detail/form screens.
+
+
+
+# v0.dev Prompt: Admin Audit Log — Site-wise Grouped Implementation
+
+## PASTE THIS ENTIRE PROMPT INTO v0.dev
+
+---
+
+Build a complete **Audit Log screen** for the Platform Admin in React with Tailwind CSS.
+
+Replace the current flat chronological list with a **3-level drill-down grouped structure**:
+- Level 1: Site / Organization (collapsed cards)
+- Level 2: Person at that site (who did what)
+- Level 3: Individual action entries (compact rows)
+
+Mobile-first, 390px max-width. Use `lucide-react` for all icons.
+
+---
+
+## DESIGN SYSTEM
+
+```
+Navy:         #0D1B3E
+Action blue:  #2563EB
+Teal:         #0D9488
+Red:          #DC2626
+Amber:        #F59E0B
+Green:        #16A34A
+Purple:       #7C3AED
+Background:   #F8FAFC
+Card:         #FFFFFF
+Text primary: #0F172A
+Text muted:   #64748B
+Border:       #E2E8F0
+```
+
+Action category color system (memorize — used everywhere):
+```
+Login / Logout:     teal-100 bg  teal-700 text    (entry / exit events)
+Visit / Patient:    blue-100 bg  blue-700 text     (clinical actions)
+Trial / Schedule:   blue-100 bg  blue-700 text     (trial management)
+Password / Account: amber-100 bg amber-700 text    (credential events)
+Failed / Suspended: red-100 bg   red-700 text      (security/errors)
+System / Notif:     slate-100 bg slate-600 text    (automated actions)
+```
+
+Global:
+- Cards: `bg-white rounded-2xl border border-slate-100 p-4`
+- Section label: `text-xs font-semibold text-slate-400 uppercase tracking-wider`
+- Input: `border border-slate-200 rounded-xl px-4 py-3 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500`
+
+---
+
+## SCREEN LAYOUT: AUDIT LOG
+
+### App Bar
+- Left: Back arrow (ChevronLeft) → returns to Admin Dashboard
+- Center: "Audit Log" bold 17px
+- Right: Download icon (Download) → triggers CSV export with current filters applied
+
+---
+
+## PART 1: FILTER BAR (sticky, stays at top on scroll)
+
+### Row 1 — Date + Group By (side by side)
+```
+[Date: Today ▾]          [Group by: Site ▾]
+```
+
+**Date dropdown options:**
+- Today (default)
+- Yesterday
+- Last 7 days
+- Last 30 days
+- Custom range (opens date range picker: start date + end date)
+
+**Group By dropdown options:**
+- Site / Hospital (default) ← PRIMARY recommended view
+- Organization (Sponsor / CRO / SMO)
+- User
+- Date (reverts to flat chronological — for export/audit review)
+- None (flat list — legacy view)
+
+### Row 2 — Action Type + Status (side by side)
+```
+[Action: All ▾]          [Status: All ▾]
+```
+
+**Action Type options:**
+- All
+- Login / Logout
+- Visit Updates
+- Patient Actions
+- Trial Actions
+- Password / Account
+- System / Notifications
+- Failed Only
+
+**Status options:**
+- All
+- Success only
+- Failed only
+
+### Row 3 — Search (full width)
+```
+[🔍 Search user, action, subject ID, trial...]
+```
+Searches across: user name, action description, subject ID, trial ID, IP address
+
+### Active filter chips (appears below search when filters applied)
+Shows applied filters as dismissible chips:
+```
+[Today ✕]  [Failed Only ✕]  [Apollo Mumbai ✕]
+```
+Each chip: slate-100 bg, slate-600 text, text-xs, X button to clear that filter
+"Clear all" blue link if any filters active
+
+---
+
+## PART 2: SUMMARY STATS ROW
+
+4 mini stat cards (2×2 grid, below filters):
+```
+[Total Actions]    [Success]
+     147               143
+
+[Failed]           [Users Active]
+   4 (red)              12
+```
+
+- Total: slate
+- Success: teal-100 bg, teal-700 number
+- Failed: red-100 bg, red-700 number, pulsing dot if > 0
+- Users Active: blue-100 bg, blue-700 number
+
+---
+
+## PART 3: GROUPED LIST (main content, scrollable)
+
+### GROUP BY SITE VIEW (default)
+
+Each site/org is a collapsible section.
+
+#### Collapsed Site Card
+```
+[🏥 icon]  Apollo Mumbai                    [›]
+           3 users  ·  12 actions today
+                              [12 ok]  [1 failed]
+```
+
+- Left: Building2 icon (for Site/Hospital) or Building (for Sponsor/CRO) or Users (for Patient org)
+- Site name bold 14px
+- Sub: "X users · Y actions today" text-xs slate-500
+- Right: teal badge "12 ok" + red badge "1 failed" (only shows if failures > 0) + ChevronRight
+- If all success: only show teal badge, no red
+- Tap anywhere → expands to show Level 2 (people)
+- Card border-left: 3px red if any failures, 3px teal if all success
+
+#### Expanded Site Card (tap to expand/collapse)
+When expanded, card grows to show users indented below:
+
+```
+[🏥]  Apollo Mumbai                          [▾]
+      3 users  ·  12 actions  ·  1 failed
+
+      ┌──────────────────────────────────┐
+      │ [DS] Dr. Sharma   PI   8 actions │ [›]
+      │ [PD] Ms. Desai   CRC   4 actions │ [›]
+      │ [⚙] System        —    2 actions │ [›]
+      └──────────────────────────────────┘
+```
+
+User rows inside expanded site:
+- Avatar circle (32px) with initials, colored by role:
+  - PI: blue-100 bg, blue-700 text
+  - CRC: teal-100 bg, teal-700 text
+  - Coordinator: amber-100 bg, amber-700 text
+  - System: slate-100 bg, slate-600 text, show ⚙ icon instead of initials
+- Name + Role badge
+- Action count right
+- Red dot if any failures for that person
+- ChevronRight → expands to show Level 3 (action entries)
+
+#### Expanded User (Level 3: action rows)
+
+When a user row is tapped, it expands inline to show their action entries:
+
+```
+[DS] Dr. Sharma   PI   8 actions           [▾]
+
+  ●  [Login]      Logged in · iOS           09:12  ✓
+  ●  [Visit]      SUBJ-001 Visit 3 complete 09:45  ✓
+  ●  [Patient]    SUBJ-015 enrolled         10:30  ✓
+  ●  [Visit]      SUBJ-007 Visit 1 updated  11:15  ✓
+  ●  [Trial]      Protocol-A schedule edit  14:02  ✓
+```
+
+Action row anatomy (compact, single line):
+```
+[status dot]  [category badge]  [description text]  [time]  [✓/✗]
+```
+
+- Status dot: 8px circle, green=success, red=failed
+- Category badge: 10px text, color per category system above, max-width 70px
+- Description: text-sm, truncated at 1 line, flex-1
+- Time: text-xs slate-400, monospace, right-aligned HH:MM
+- Status icon: CheckCircle (teal 14px) or XCircle (red 14px) far right
+
+**Tap any action row → Action Detail bottom sheet** (see Part 4)
+
+Show all entries for that user, sorted newest first.
+
+---
+
+### GROUP BY ORGANIZATION VIEW
+
+Same collapse/expand pattern but Level 1 is Org type:
+
+```
+[🏢] PharmaCo Ltd    Sponsor    2 admins · 8 actions   [5 ok]  [›]
+[🏢] HealthCRO       CRO        1 user  · 3 actions    [3 ok]  [›]
+[🏥] Apollo Mumbai   Site       3 users · 12 actions   [12 ok] [1 failed] [›]
+[🏥] Max Delhi       Site       2 users · 7 actions    [5 ok]  [2 failed] [›]
+```
+
+Expands same way — Level 2 shows users, Level 3 shows entries.
+
+---
+
+### GROUP BY USER VIEW
+
+Level 1 is the user directly (no site grouping):
+
+```
+[DS] Dr. Sharma     PI · Apollo Mumbai    8 actions   [›]
+[PD] Ms. Desai     CRC · Apollo Mumbai    4 actions   [1 failed] [›]
+[SR] Dr. S. Rao     PI · Max Delhi        5 actions   [›]
+[⚙] System          —                    6 actions   [›]
+```
+
+Tap → Level 2 directly (action entries for that user)
+
+---
+
+### GROUP BY DATE VIEW (flat, for detailed review)
+
+Date headers as sticky section labels:
+```
+TODAY — 19 May 2025 — 24 actions
+```
+
+Under each date: compact action rows (no nesting):
+```
+09:12  [DS] Dr. Sharma     [Login]    Logged in · iOS · Apollo Mumbai         ✓
+09:45  [DS] Dr. Sharma     [Visit]    SUBJ-001 Visit 3 complete               ✓
+10:14  [??] Unknown        [Login]    Failed login · Max Delhi · 45.33.22.11  ✗
+```
+
+Full columns: Time | Avatar+Name | Category | Description | Status
+
+---
+
+## PART 4: ACTION DETAIL BOTTOM SHEET
+
+Slides up from bottom when any action row is tapped.
+Drag handle at top. Tap backdrop or drag down to dismiss.
+
+```
+┌─────────────────────────────────────┐
+│  ▬  (drag handle)                   │
+│                                     │
+│  [Visit]  Visit Status Updated      │
+│  ✓ Success                          │
+│                                     │
+│  ──── Details ────                  │
+│  Audit ID      AUD-047              │
+│  Timestamp     19 May 2025 · 09:45  │
+│  User          Dr. Rajesh Sharma    │
+│  User ID       USR-003              │
+│  Role          Principal Inv.       │
+│  Site          Apollo Mumbai        │
+│  Organization  Apollo Hospitals     │
+│                                     │
+│  ──── Action ────                   │
+│  Action        Visit Update         │
+│  Description   SUBJ-001 Visit 3     │
+│                marked Completed.    │
+│                Tasks: Vitals ✓,     │
+│                Blood draw ✓, ECG ✓  │
+│  Trial         Protocol-A           │
+│  Patient       SUBJ-001             │
+│                                     │
+│  ──── Technical ────                │
+│  IP Address    192.168.1.45         │
+│  Device        iOS 17 · iPhone 14   │
+│  Session ID    SES-2024-0891        │
+│                                     │
+│  [Copy Audit ID]   [Export Entry]   │
+└─────────────────────────────────────┘
+```
+
+Bottom sheet sections:
+1. Header: category badge + action name + status (Success/Failed with icon)
+2. Details: Audit ID, Timestamp, User, User ID, Role, Site, Org
+3. Action: Action type, full description, Trial ID (if applicable), Patient ID (if applicable)
+4. Technical: IP, Device/OS, Session ID
+5. Two buttons: "Copy Audit ID" (copies to clipboard) + "Export Entry" (downloads single entry)
+
+For failed entries, add a red section:
+```
+──── Failure Details ────
+Reason      Invalid credentials (attempt 3/5)
+Risk Level  [Medium]
+Action      Account locked after 5 attempts
+```
+
+---
+
+## PART 5: EXPORT FUNCTIONALITY
+
+### Export Options (triggered by Download icon in app bar)
+
+Bottom sheet with export options:
+```
+Export Audit Log
+
+Format:   [CSV]  [PDF]  (toggle)
+
+Scope:    ● Current view (filtered)
+          ○ All data for selected date range
+          ○ Specific site only
+
+Date:     [From: 1 May 2025]  [To: 19 May 2025]
+
+[Cancel]         [Export Now →]
+```
+
+Export button: blue filled, generates download
+
+---
+
+## PART 6: SECURITY ALERTS SECTION
+
+Pinned above the grouped list when there are failed/suspicious entries:
+
+```
+[⚠ Security Alerts — 3 items today]         [View All ›]
+```
+
+Amber-50 bg, amber border, rounded-xl, p-3, dismissible X:
+
+Shows up to 2 alert rows inline:
+```
+✗  Failed login · Max Delhi · 45.33.22.11 · 3 attempts · 10:14
+✗  User suspended · SUBJ-related · USR-012 · by Admin · 11:02
+```
+
+"View All" → filters list to Failed Only
+
+---
+
+## COMPLETE MOCK DATA
+
+```javascript
+const mockAuditData = {
+  summary: {
+    totalActions: 147,
+    success: 143,
+    failed: 4,
+    usersActive: 12
+  },
+  sites: [
+    {
+      id: "SITE-001",
+      name: "Apollo Mumbai",
+      type: "Site",
+      icon: "hospital",
+      org: "Apollo Hospitals",
+      totalActions: 12,
+      successCount: 11,
+      failedCount: 1,
+      users: [
+        {
+          id: "USR-003",
+          name: "Dr. Rajesh Sharma",
+          initials: "RS",
+          role: "PI",
+          totalActions: 8,
+          failedCount: 0,
+          entries: [
+            { id:"AUD-001", category:"Login",   desc:"Logged in · iOS · iPhone 14",                 time:"09:12", status:"success", ip:"192.168.1.45", device:"iOS 17" },
+            { id:"AUD-005", category:"Visit",   desc:"SUBJ-001 Visit 3 marked Completed",           time:"09:45", status:"success", trial:"Protocol-A", patient:"SUBJ-001" },
+            { id:"AUD-009", category:"Patient", desc:"SUBJ-015 enrolled in Protocol-A",             time:"10:30", status:"success", trial:"Protocol-A", patient:"SUBJ-015" },
+            { id:"AUD-012", category:"Visit",   desc:"SUBJ-007 Visit 1 status updated to Screening",time:"11:15", status:"success", trial:"Protocol-B", patient:"SUBJ-007" },
+            { id:"AUD-018", category:"Trial",   desc:"Protocol-A visit schedule edited (v3)",       time:"14:02", status:"success", trial:"Protocol-A" },
+            { id:"AUD-022", category:"Visit",   desc:"SUBJ-003 Visit 5 flagged as protocol deviation",time:"14:45", status:"success", trial:"Protocol-C", patient:"SUBJ-003" },
+            { id:"AUD-031", category:"Login",   desc:"Session timeout · auto logout",              time:"17:00", status:"success" },
+            { id:"AUD-035", category:"Login",   desc:"Logged in · iOS",                            time:"17:15", status:"success" }
+          ]
+        },
+        {
+          id: "USR-007",
+          name: "Ms. Priya Desai",
+          initials: "PD",
+          role: "CRC",
+          totalActions: 4,
+          failedCount: 1,
+          entries: [
+            { id:"AUD-002", category:"Failed",  desc:"Failed login attempt (attempt 2 of 5)",      time:"08:52", status:"failed",  ip:"10.0.0.14", device:"Android 14" },
+            { id:"AUD-003", category:"Login",   desc:"Logged in · Android · Samsung S23",          time:"08:55", status:"success", ip:"10.0.0.14" },
+            { id:"AUD-006", category:"Patient", desc:"SUBJ-011 medication schedule updated",       time:"10:05", status:"success", patient:"SUBJ-011" },
+            { id:"AUD-011", category:"Login",   desc:"Logged out · manual",                        time:"16:30", status:"success" }
+          ]
+        },
+        {
+          id: "SYSTEM",
+          name: "System",
+          initials: "SYS",
+          role: "System",
+          totalActions: 2,
+          failedCount: 0,
+          entries: [
+            { id:"AUD-041", category:"System",  desc:"Batch visit reminders sent · 8 patients",   time:"08:00", status:"success" },
+            { id:"AUD-042", category:"System",  desc:"Nightly audit log backup completed",         time:"02:00", status:"success" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "SITE-002",
+      name: "Max Delhi",
+      type: "Site",
+      icon: "hospital",
+      org: "Max Healthcare",
+      totalActions: 7,
+      successCount: 5,
+      failedCount: 2,
+      users: [
+        {
+          id: "USR-009",
+          name: "Dr. Sunita Rao",
+          initials: "SR",
+          role: "PI",
+          totalActions: 5,
+          failedCount: 0,
+          entries: [
+            { id:"AUD-015", category:"Login",   desc:"Logged in · Web · Chrome",                  time:"09:30", status:"success" },
+            { id:"AUD-019", category:"Visit",   desc:"SUBJ-008 Visit 2 completed",               time:"10:15", status:"success", trial:"Protocol-A", patient:"SUBJ-008" },
+            { id:"AUD-024", category:"Patient", desc:"SUBJ-016 added to Protocol-B",             time:"11:00", status:"success", trial:"Protocol-B", patient:"SUBJ-016" },
+            { id:"AUD-028", category:"Visit",   desc:"SUBJ-012 Visit 4 marked Screen Fail",      time:"13:30", status:"success", trial:"Protocol-A", patient:"SUBJ-012" },
+            { id:"AUD-033", category:"Login",   desc:"Logged out · manual",                      time:"17:45", status:"success" }
+          ]
+        },
+        {
+          id: "USR-014",
+          name: "Unknown",
+          initials: "??",
+          role: "Unknown",
+          totalActions: 2,
+          failedCount: 2,
+          entries: [
+            { id:"AUD-016", category:"Failed",  desc:"Failed login attempt (attempt 1 of 5)",    time:"10:10", status:"failed",  ip:"45.33.22.11", device:"Unknown" },
+            { id:"AUD-017", category:"Failed",  desc:"Failed login attempt (attempt 2 of 5)",    time:"10:14", status:"failed",  ip:"45.33.22.11", device:"Unknown" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "ORG-001",
+      name: "PharmaCo Ltd",
+      type: "Sponsor",
+      icon: "building",
+      org: "PharmaCo Ltd",
+      totalActions: 8,
+      successCount: 8,
+      failedCount: 0,
+      users: [
+        {
+          id: "ADMIN-001",
+          name: "Rajesh Kumar",
+          initials: "RK",
+          role: "Sponsor Admin",
+          totalActions: 5,
+          failedCount: 0,
+          entries: [
+            { id:"AUD-020", category:"Login",   desc:"Logged in · Web",                          time:"10:00", status:"success" },
+            { id:"AUD-021", category:"Trial",   desc:"Protocol-D created (Oncology Phase II)",   time:"10:45", status:"success", trial:"Protocol-D" },
+            { id:"AUD-025", category:"Trial",   desc:"Protocol-D shared with Apollo Mumbai",     time:"11:20", status:"success", trial:"Protocol-D" },
+            { id:"AUD-029", category:"Trial",   desc:"Protocol-A visit schedule approved (v3)",  time:"14:10", status:"success", trial:"Protocol-A" },
+            { id:"AUD-034", category:"Login",   desc:"Logged out · manual",                      time:"18:00", status:"success" }
+          ]
+        },
+        {
+          id: "ADMIN-002",
+          name: "Platform Admin",
+          initials: "PA",
+          role: "Platform Admin",
+          totalActions: 3,
+          failedCount: 0,
+          entries: [
+            { id:"AUD-036", category:"Account", desc:"USR-007 password reset initiated",         time:"09:00", status:"success" },
+            { id:"AUD-037", category:"Account", desc:"USR-019 account activated",               time:"09:15", status:"success" },
+            { id:"AUD-038", category:"System",  desc:"Audit log export generated (May report)",  time:"09:30", status:"success" }
+          ]
+        }
+      ]
+    }
+  ],
+  securityAlerts: [
+    { id:"AUD-016", desc:"Failed login · Max Delhi · 45.33.22.11 · attempt 1", time:"10:10" },
+    { id:"AUD-017", desc:"Failed login · Max Delhi · 45.33.22.11 · attempt 2 of 5", time:"10:14" }
+  ]
+}
+```
+
+---
+
+## STATE MANAGEMENT
+
+```javascript
+const [groupBy, setGroupBy] = useState('site')         // site | org | user | date | none
+const [dateFilter, setDateFilter] = useState('today')  // today | yesterday | week | month | custom
+const [actionFilter, setActionFilter] = useState('all')
+const [statusFilter, setStatusFilter] = useState('all')
+const [searchQuery, setSearchQuery] = useState('')
+const [expandedSites, setExpandedSites] = useState([]) // array of expanded site IDs
+const [expandedUsers, setExpandedUsers] = useState([]) // array of expanded user IDs (per site)
+const [selectedEntry, setSelectedEntry] = useState(null) // for detail bottom sheet
+const [showDetailSheet, setShowDetailSheet] = useState(false)
+const [showExportSheet, setShowExportSheet] = useState(false)
+const [alertsDismissed, setAlertsDismissed] = useState(false)
+```
+
+Toggle logic:
+- `expandedSites`: clicking a site card adds/removes its ID from the array
+- `expandedUsers`: clicking a user row adds/removes "siteId-userId" from the array
+- Both can be open simultaneously (multiple sites and users expanded at once)
+- Search query: when active, auto-expands all sites and users that have matching entries, highlights matching text in yellow-200
+- Status filter "Failed only": auto-collapses sites with 0 failures, highlights failed sites with red left border
+
+---
+
+## INTERACTION DETAILS
+
+- Site card expand: chevron rotates 90° (transition 200ms), content slides down (max-height animation)
+- User row expand: same chevron rotation, entries slide down
+- Action row tap: bottom sheet slides up (translateY, 250ms), backdrop fades in (opacity, 200ms)
+- Failed entry rows: red-50 bg, red left border on the row
+- Search highlight: matching text wrapped in `<mark>` with yellow-200 bg
+- "Copy Audit ID" button: shows "Copied ✓" for 2 seconds then resets
+- Security alerts section: amber pulsing border when failed count > 0
+- Empty state (no results): Search icon + "No audit entries match your filters" + "Clear filters" button
+- Loading skeleton: gray animated bars for site cards while data loads (800ms shimmer)
+
+---
+
+## WHAT NOT TO DO
+
+- Do NOT show a flat chronological list as the default view — grouped by site is always default
+- Do NOT hide the security alerts section even if user scrolls past it — it stays pinned until dismissed
+- Do NOT use red for regular CTA buttons — only for failed status indicators
+- Do NOT show IP addresses in the collapsed/summary views — only in the full detail bottom sheet
+- Do NOT show patient full names anywhere — only Subject IDs (SUBJ-001 format)
+- Do NOT paginate — use virtualization or show "Load more" at bottom of each site's entries
+
+Build as a single React component with internal state. Every expand/collapse, filter, and tap must produce a visible state change. The detail bottom sheet must show all fields from the mock data.
+
+
+
+Each visit block in the day view gets a doctor row added at the bottom:
+
+- Thin separator line (0.5px, same color as block border at 20% opacity)
+- 16px avatar circle: initials of PI, color matches the block family
+  (blue block → blue-200 bg + blue-800 text, red → red-200 + red-800, teal → teal-200 + teal-800)
+- Doctor name: "Dr. [First initial]. [Last name]" in 10px text-secondary
+  Example: "Dr. R. Sharma" — abbreviated to avoid wrapping
+
+Data to show per block:
+  09:00  SUBJ-001  Visit 3   Scheduled  → Dr. R. Sharma
+  11:00  SUBJ-003  Visit 5   Overdue    → Dr. A. Krishnan  
+  14:00  SUBJ-007  Visit 1   Completed  → Dr. S. Rao
+
+This doctor row also applies to the Week view visit blocks.
+Do NOT add it to Month view dots — too small.
+
+# V0.DEV PROMPT — Role-Specific Registration Forms
+## Registration Screen — Different Fields Per Entity Type
+
+---
+
+## CONTEXT
+
+The Registration screen appears **after** the user selects their entity type on the "Who are you?" screen.
+
+The selected entity type is passed as a prop/state to the Registration screen.
+Based on the entity type, the form must **dynamically show different fields**.
+
+There is NO single universal registration form.
+There are **5 distinct form variants** — one per entity type.
+
+---
+
+## FLOW
+
+```
+Welcome Screen
+      ↓
+  [Sign Up]
+      ↓
+"Who are you?" Screen
+  [Sponsor] [CRO] [SMO] [Site/Hospital] [Patient]
+      ↓
+Registration Screen
+(form fields change based on selection above)
+      ↓
+OTP Verification
+      ↓
+Password Creation
+      ↓
+Account Created ✓
+```
+
+---
+
+## SIGN IN — NO ENTITY SELECTION NEEDED
+
+- Sign In screen is a **single universal screen** for ALL roles
+- Just Email/Phone + Password
+- System detects the role from the account and routes to the correct dashboard automatically
+- Routes:
+  - Sponsor / CRO → Sponsor Dashboard
+  - SMO / Site / PI → Investigator Dashboard
+  - Patient → Patient Dashboard
+  - Platform Admin → Admin Dashboard
+
+---
+
+## REGISTRATION FIELD MATRIX
+
+| Field | Sponsor | CRO | SMO | Site/Hospital | Patient |
+|-------|:-------:|:---:|:---:|:-------------:|:-------:|
+| Full Name | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Designation | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Email ID | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Phone Number | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Organization Name | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Organization Address | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Role (Admin/User toggle) | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Add Sites (name + address) | ❌ | ❌ | ✅ ONLY | ❌ | ❌ |
+| Date of Birth | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Gender | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Preferred Language | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Consent Checkboxes (2) | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Terms checkbox (1) | ✅ | ✅ | ✅ | ✅ | ❌ (uses consent checkboxes instead) |
+
+---
+
+## FORM VARIANT 1 — SPONSOR
+
+**Header:** back arrow + "Registration" + blue chip badge "Sponsor"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name* (text input)
+2. Designation (text input, optional)
+3. Email ID* (email input) — inline error: "Email already exists" in red if duplicate
+4. Phone Number* (+91 prefix dropdown + number input)
+5. Organization Name* (text input with autocomplete dropdown suggestions below as user types)
+6. Organization Address (textarea, 3 rows, optional)
+7. Role* — two pill toggle buttons side by side:
+   - **[Admin]** | **[User]** — active pill = `#0D1B3E` bg + white text, inactive = white bg + gray border
+
+**Bottom section:**
+- Single checkbox row:
+  `☐ I agree to the` **[Terms & Conditions]** `and` **[Privacy Policy]**
+  - Tapping "Terms & Conditions" → opens Terms bottom sheet (see separate prompt)
+  - Tapping "Privacy Policy" → opens Privacy Policy bottom sheet
+  - Must be checked to enable Submit button
+
+- **[Submit]** button — dark navy `#0D1B3E`, full width, 48px height, disabled (gray) until all required fields filled + checkbox ticked
+
+---
+
+## FORM VARIANT 2 — CRO
+
+**Header:** back arrow + "Registration" + blue chip badge "CRO"
+**Progress bar:** 40%
+
+**Fields (in order):** ← IDENTICAL to Sponsor
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name*
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+> CRO form is identical to Sponsor — only the entity chip badge label differs.
+
+---
+
+## FORM VARIANT 3 — SMO ⭐ (Has unique "Add Sites" section)
+
+**Header:** back arrow + "Registration" + blue chip badge "SMO"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name* (SMO organization name)
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**UNIQUE SECTION — "Sites Managed" (SMO only):**
+
+Divider line with label: `─── Sites Managed ───`
+
+Instruction text (gray, 13px): "Add the sites/hospitals that your SMO manages"
+
+**Site Entry Card (white, border, rounded-xl):**
+```
+┌─────────────────────────────────┐
+│  Site 1                    [🗑] │  ← trash icon to remove
+│                                 │
+│  Site Name*                     │
+│  [________________________]     │
+│                                 │
+│  Site Address                   │
+│  [________________________]     │
+│  [________________________]     │
+│                                 │
+└─────────────────────────────────┘
+```
+
+- First site card shown by default (cannot be removed)
+- **[+ Add Another Site]** button (outlined, blue, full width) — adds another site card below
+- Each additional site card has a trash/delete icon (top-right) to remove it
+- Site cards are numbered: Site 1, Site 2, Site 3...
+- Maximum: no hard limit shown in UI, but cards stack vertically with 12px gap
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+---
+
+## FORM VARIANT 4 — SITE / HOSPITAL
+
+**Header:** back arrow + "Registration" + blue chip badge "Site/Hospital"
+**Progress bar:** 40%
+
+**Fields (in order):** ← IDENTICAL to Sponsor
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name* (hospital/site name)
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+> Site/Hospital form is identical to Sponsor — only the entity chip badge label differs.
+
+---
+
+## FORM VARIANT 5 — PATIENT ⭐⭐ (Most different)
+
+**Header:** back arrow + "Registration" + blue chip badge "Patient"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name* (text input)
+2. Date of Birth* (date picker — show calendar icon on right, opens date picker on tap)
+   - Format displayed: DD / MM / YYYY
+3. Gender* (dropdown select):
+   - Options: Male | Female | Other | Prefer not to say
+4. Phone Number* (+91 prefix dropdown + number input)
+5. Email ID (email input, optional for patient)
+
+**Preferred Language* (dropdown select):**
+- Options: English | Hindi | Tamil | Telugu | Kannada | Malayalam | Bengali | Marathi
+
+**NO fields for:** Designation, Organization Name, Organization Address, Role toggle
+
+**Bottom section — CONSENT CHECKBOXES (replaces single Terms checkbox):**
+
+Two separate required checkboxes (both must be checked to enable Submit):
+
+```
+☐  I consent to use of my contact details to receive in-app 
+   reminders and notifications related to my clinical trial 
+   participation through this application.
+
+☐  I have read and accepted the [Terms & Conditions] and 
+   [Privacy Policy].
+```
+
+- Each checkbox is independently tappable
+- Both must be ticked to enable the Submit button
+- "Terms & Conditions" and "Privacy Policy" are tappable links → open bottom sheet modals
+- Checkbox label text wraps to multiple lines (do not truncate)
+
+**[Submit]** button — disabled until all required fields filled + BOTH checkboxes ticked
+
+---
+
+## SHARED UI SPECS (All 5 Variants)
+
+### Entity Chip Badge
+- Shown below the "Registration" title in the header
+- Pill shape, blue-50 bg (`#EFF6FF`), blue-700 text (`#1D4ED8`), blue border
+- Shows selected entity name: "Sponsor" / "CRO" / "SMO" / "Site/Hospital" / "Patient"
+
+### Form Field Specs
+- Label: 13px, `#475569`, above the input
+- Input: white bg, `#E2E8F0` border, 12px radius, 48px height, 14px text `#0F172A`
+- Focus state: `#2563EB` border (2px)
+- Error state: `#DC2626` border + red error message below (13px)
+- Required fields: asterisk (*) after label
+
+### Phone Number Field
+- Left section (prefix): gray-100 bg, `+91` text, border-right, not editable
+- Right section: number input, no left border
+
+### Organization Name Autocomplete
+- As user types, show a white dropdown card below the input
+- Dropdown items: org name + org type badge
+- Tap item to fill the field and close dropdown
+- Show "Not found? Continue typing your org name" at bottom of dropdown
+
+### Role Toggle (Sponsor/CRO/SMO/Site only)
+- Two buttons side by side, equal width, rounded-lg
+- Active: `#0D1B3E` bg, white text
+- Inactive: white bg, `#E2E8F0` border, `#64748B` text
+- Only one can be active at a time
+
+### Checkbox Style
+- 20×20px square, rounded-sm
+- Unchecked: white bg, `#CBD5E1` border
+- Checked: `#0D1B3E` bg, white checkmark icon
+- Tap anywhere on the label row to toggle
+
+### Submit Button States
+| State | Background | Text | Condition |
+|-------|-----------|------|-----------|
+| Disabled | `#CBD5E1` | `#94A3B8` | Required fields empty or checkbox unchecked |
+| Enabled | `#0D1B3E` | White | All required fields filled + checkbox(es) ticked |
+| Loading | `#0D1B3E` + spinner | "Submitting..." | While API call in progress |
+
+---
+
+## IMPLEMENTATION NOTES FOR V0
+
+```jsx
+// Pseudo-code structure
+const RegistrationScreen = ({ entityType }) => {
+  // entityType = "sponsor" | "cro" | "smo" | "site" | "patient"
+  
+  const isSMO = entityType === "smo";
+  const isPatient = entityType === "patient";
+  const isOrgUser = !isPatient; // sponsor, cro, smo, site
+
+  return (
+    <>
+      {/* Common to all */}
+      <FullNameField />
+      
+      {/* Org users only */}
+      {isOrgUser && <DesignationField />}
+      
+      <EmailField />
+      <PhoneField />
+      
+      {/* Org users only */}
+      {isOrgUser && <OrgNameField />}
+      {isOrgUser && <OrgAddressField />}
+      {isOrgUser && <RoleToggle />}
+      
+      {/* SMO only */}
+      {isSMO && <AddSitesSection />}
+      
+      {/* Patient only */}
+      {isPatient && <DateOfBirthField />}
+      {isPatient && <GenderDropdown />}
+      {isPatient && <LanguageDropdown />}
+      
+      {/* Consent / Terms */}
+      {isPatient ? <PatientConsentCheckboxes /> : <SingleTermsCheckbox />}
+      
+      <SubmitButton />
+    </>
+  );
+};
+```
+
+---
+
+## VALIDATION RULES
+
+| Field | Rule |
+|-------|------|
+| Full Name | Required, min 2 chars |
+| Email | Required for all, valid email format, duplicate check |
+| Phone | Required, 10 digits (after +91 prefix) |
+| Organization Name | Required for org users |
+| Role | Required for org users, must select one |
+| Site Name (SMO) | Required for each site card added |
+| Date of Birth (Patient) | Required, must be valid date, user must be 18+ |
+| Gender (Patient) | Required, must select one option |
+| Language (Patient) | Required, must select one option |
+| Terms checkbox | Must be checked before Submit enabled |
+| Both consent checkboxes (Patient) | BOTH must be checked before Submit enabled |
+
+---
+
+## ERROR MESSAGES
+
+| Scenario | Message | Location |
+|----------|---------|----------|
+| Email already registered | "This email is already registered. Sign in instead?" | Below email field, red |
+| Phone already registered | "This phone number is already registered." | Below phone field, red |
+| Invalid email format | "Please enter a valid email address" | Below email field, red |
+| Phone not 10 digits | "Please enter a valid 10-digit mobile number" | Below phone field, red |
+| Under 18 (Patient DOB) | "You must be 18 or older to register" | Below DOB field, red |
+| Submit with empty required fields | Highlight all empty required fields with red border simultaneously | Inline |
+
+---
+
+*End of Role-Specific Registration Forms Prompt*
+*5 form variants: Sponsor / CRO / SMO (+ Add Sites) / Site/Hospital / Patient (+ Consent)*
+
+
+
+
+# V0.DEV PROMPT — Patient Dashboard Icon Navigation
+## Bell Icon → Notifications Screen | Profile Avatar → Profile Screen
+
+---
+
+## CONTEXT
+
+On the **Patient Dashboard ("My Trial Journey")**, the top app bar has:
+- **Left:** "My Trial Journey" title
+- **Right:** 🔔 Bell icon (with red badge showing count) + 🟣 Avatar circle "PK"
+
+Both icons navigate to **completely separate full screens** (not modals, not overlays, not bottom sheets).
+
+```
+Patient Dashboard
+├── 🔔 Bell icon  ──────────→  Notifications Screen (full screen)
+└── 🟣 PK Avatar  ──────────→  Profile & Settings Screen (full screen)
+```
+
+Each screen has its own back arrow that returns to the Patient Dashboard.
+
+---
+
+# SCREEN A — NOTIFICATIONS SCREEN
+## (Triggered by tapping the Bell icon 🔔)
+
+---
+
+## NAVIGATION
+- **Entry:** Tap bell icon on any screen's app bar
+- **Exit:** Tap back arrow → returns to the screen the user came from
+- **URL/Route:** `/notifications`
+
+---
+
+## APP BAR
+- Back arrow (ChevronLeft, 24px) — left
+- Title: **"Notifications"** (Sora, 17px, `#0D1B3E`, bold) — center
+- **"Mark All Read"** text button (14px, `#2563EB`) — right
+  - Tap → marks all visible notifications as read (all blue dots disappear, all titles become normal weight)
+
+---
+
+## FILTER CHIPS (horizontal scrollable row, below app bar)
+
+```
+[All 12] [Visits 5] [Medication 4] [Trials 2] [System 1]
+```
+
+- Default active: **All**
+- Active chip: `#EFF6FF` bg, `#1D4ED8` border + text, bold
+- Inactive chip: white bg, `#E2E8F0` border, `#64748B` text
+- Chips scroll horizontally if they overflow (no wrap)
+- Count badge inside each chip updates when notifications are read
+
+---
+
+## NOTIFICATION LIST (scrollable, grouped by date)
+
+### Date Group Headers
+```
+TODAY
+YESTERDAY  
+EARLIER THIS WEEK
+OLDER
+```
+- Header text: 11px, `#94A3B8`, uppercase, letter-spacing 0.8px
+- `#F8FAFC` section header bg (full width)
+- 8px padding top/bottom
+
+---
+
+### NOTIFICATION CARD ANATOMY
+
+```
+┌─────────────────────────────────────────────┐
+│ 🔵  [ICON]  Title text bold (unread)    12m │
+│     [circ]  Preview message text here...    │
+│             truncated to 2 lines            │
+└─────────────────────────────────────────────┘
+```
+
+**Left edge:** Blue dot `#2563EB` (6px circle) — visible when UNREAD, hidden when read
+**Icon circle:** 40px circle with icon centered (20px icon)
+**Title:** 14px, `#0F172A`, bold when unread / normal weight when read
+**Preview:** 13px, `#64748B`, max 2 lines, ellipsis overflow
+**Timestamp:** 12px, `#94A3B8`, top-right corner
+
+**Tap notification card:**
+- Marks it as read (blue dot disappears, title weight normalizes)
+- Opens **Notification Detail Screen** (see Screen A.1 below)
+
+**Long press notification card:**
+- Card gets a blue-50 background
+- Checkbox appears on left (replaces blue dot)
+- Other cards get checkboxes too (bulk select mode activated)
+- Footer bulk action bar slides up from bottom
+
+---
+
+### NOTIFICATION TYPES & ICONS
+
+| Type | Icon | Icon Circle Color | Example Title | Example Body |
+|------|------|-------------------|---------------|--------------|
+| **Visit Reminder** | Bell | `#DBEAFE` (blue-100) | "Visit 7 Tomorrow" | "Your Follow-Up Visit 7 is scheduled for 24 May 2025 at 10:00 AM at AIIMS Delhi." |
+| **Visit Overdue** | AlertTriangle | `#FEE2E2` (red-100) | "Missed Visit Alert" | "Visit 5 was due 3 days ago. Please contact your research team immediately." |
+| **Visit Completed** | CheckCircle | `#D1FAE5` (green-100) | "Visit 6 Confirmed" | "Your Visit 6 has been marked complete. Next visit: Visit 7 on 24 May 2025." |
+| **Medication Reminder** | Pill | `#F3E8FF` (purple-100) | "Take Metformin 500mg" | "It's 8:00 AM — time to take your morning dose of Metformin 500mg." |
+| **Medication Taken** | CheckCircle | `#D1FAE5` (green-100) | "Medication Logged" | "Metformin 500mg marked as taken at 8:03 AM." |
+| **Trial Update** | Bell | `#FEF3C7` (amber-100) | "Trial Update" | "Protocol-001 schedule has been updated by Dr. Sharma. Please review your upcoming visits." |
+| **Message from PI** | MessageCircle | `#E0F2FE` (sky-100) | "Message from Dr. Sharma" | "Please remember to fast for 8 hours before your Visit 7 blood draw." |
+| **System** | Settings | `#F1F5F9` (slate-100) | "App Updated" | "Patient Visit Schedule has been updated to version 2.1." |
+
+---
+
+### SAMPLE NOTIFICATION LIST (mock data, show all these)
+
+**TODAY**
+
+1. 🔵 [Bell/blue] **"Visit 7 Tomorrow"** · 2h ago
+   "Your Follow-Up Visit 7 is scheduled for 24 May 2025 at 10:00 AM at AIIMS Delhi. Please arrive 15 minutes early."
+
+2. 🔵 [Pill/purple] **"Take Metformin 500mg"** · 8:00 AM
+   "It's 8:00 AM — time to take your morning dose of Metformin 500mg."
+
+3. ⚪ [CheckCircle/green] "Medication Logged" · 8:03 AM *(read)*
+   "Metformin 500mg marked as taken at 8:03 AM. Good job keeping up with your schedule!"
+
+**YESTERDAY**
+
+4. ⚪ [CheckCircle/green] "Visit 6 Confirmed" · Yesterday, 3:30 PM *(read)*
+   "Your Visit 6 has been marked complete by Dr. Sharma. Next visit: Visit 7 on 24 May."
+
+5. 🔵 [MessageCircle/sky] **"Message from Dr. Sharma"** · Yesterday, 11:00 AM
+   "Please remember to fast for 8 hours before your Visit 7 blood draw. Water is allowed."
+
+6. ⚪ [Pill/purple] "Take Aspirin 75mg" · Yesterday, 2:00 PM *(read)*
+   "It's 2:00 PM — time to take your afternoon dose of Aspirin 75mg."
+
+**EARLIER THIS WEEK**
+
+7. ⚪ [Bell/amber] "Trial Update" · 22 May *(read)*
+   "Protocol-001 visit schedule has been updated. Visit 7 window has been extended by 2 days."
+
+8. 🔵 [AlertTriangle/red] **"Missed Medication"** · 21 May
+   "You did not log your evening dose of Metformin 500mg (8:00 PM). Please contact your team if you need help."
+
+---
+
+## BULK ACTION MODE (long-press to activate)
+
+When in bulk select mode:
+- App bar changes: **"X selected"** (left) + **"Cancel"** (right, blue text)
+- All cards show checkboxes
+- Bottom action bar slides up (64px, white, shadow):
+
+```
+┌─────────────────────────────────────────┐
+│ [Select All]   [🗑 Delete]  [🔕 Stop]   │
+└─────────────────────────────────────────┘
+```
+
+- **Select All:** selects all visible notifications
+- **Delete (red):** permanently deletes selected notifications (confirm dialog)
+- **Stop (amber):** stops future notifications of the same type as selected
+
+**Delete Confirmation Dialog:**
+- "Delete X notifications?"
+- "This cannot be undone."
+- **[Cancel]** outlined | **[Delete]** red filled
+
+---
+
+## EMPTY STATE (when filter shows no notifications)
+
+```
+        🔔
+   (gray bell icon, 48px)
+
+  No notifications here
+  You're all caught up!
+
+  [Go to Dashboard]  ← blue outlined button
+```
+
+---
+
+# SCREEN A.1 — NOTIFICATION DETAIL SCREEN
+## (Triggered by tapping a notification card)
+
+---
+
+## APP BAR
+- Back arrow → returns to Notifications list
+- Title: notification type (e.g., "Visit Reminder") — center
+- No right actions
+
+## CONTENT (full screen, scrollable)
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│   [ICON CIRCLE — 64px, centered]        │
+│                                         │
+│   Visit 7 Tomorrow                      │  ← title, Sora 20px bold
+│   25 May 2025 · 10:32 AM               │  ← timestamp, gray 13px
+│                                         │
+│ ─────────────────────────────────────── │
+│                                         │
+│  Your Follow-Up Visit 7 is scheduled   │  ← full message body
+│  for 24 May 2025 at 10:00 AM at        │  DM Sans 15px, #374151
+│  AIIMS Delhi. Please arrive 15         │  line-height 1.7
+│  minutes early and bring your          │
+│  patient card.                          │
+│                                         │
+│ ─────────────────────────────────────── │
+│                                         │
+│  Related Details                        │  ← context section header
+│  ┌───────────────────────────────────┐  │
+│  │ 📋 Protocol-001                   │  │
+│  │ 🏥 Visit 7 · Follow-Up Visit      │  │
+│  │ 📍 AIIMS Delhi, OPD Block 3       │  │
+│  │ 📅 24 May 2025, 10:00 AM          │  │
+│  │ ⏰ Window: 22–26 May 2025         │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │      View Visit Details  →      │    │  ← primary action button
+│  └─────────────────────────────────┘    │
+│                                         │
+│  [🗑 Delete Notification]               │  ← text link, red, centered
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Primary action button** — varies by notification type:
+
+| Notification Type | Button Text | Action |
+|------------------|-------------|--------|
+| Visit Reminder | "View Visit Details →" | → Visit Detail screen |
+| Visit Overdue | "Update Visit Status →" | → Visit Detail screen |
+| Medication Reminder | "Log Medication →" | → Medication Reminders screen |
+| Trial Update | "View Trial →" | → About Trial screen |
+| Message from PI | "Open Chat →" | → Chat screen |
+| System | (no action button) | — |
+
+---
+
+# SCREEN B — PROFILE & SETTINGS SCREEN
+## (Triggered by tapping the "PK" avatar circle 🟣)
+
+---
+
+## NAVIGATION
+- **Entry:** Tap avatar (PK circle) on Patient Dashboard app bar
+- **Exit:** Tap back arrow → returns to Patient Dashboard
+- **Route:** `/profile`
+
+---
+
+## APP BAR
+- Back arrow (ChevronLeft) — left
+- Title: **"Profile & Settings"** — center
+- No right action icons
+
+---
+
+## SCREEN LAYOUT (full screen, scrollable)
+
+### SECTION 1 — PROFILE HEADER (top of screen, non-scrollable visual anchor)
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│           ┌─────────┐                   │
+│           │   👤    │ ← 80px avatar     │
+│           │   PK    │   circle          │
+│           └────📷───┘ ← camera icon     │
+│               (bottom-right of circle)  │
+│                                         │
+│           Priya Kapoor                  │  ← name, Sora 18px bold
+│         priya.k@gmail.com               │  ← email, gray 13px
+│       +91 98765 43210                   │  ← phone, gray 13px
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+- Avatar circle: 80px, `#7C3AED` (purple) bg, "PK" white text (Sora, 24px)
+- Camera icon badge: 28px white circle, `#2563EB` camera icon inside, bottom-right of avatar
+  - Tap camera → opens image picker (photo library / camera options in an action sheet)
+- Name: `#0F172A`, 18px, Sora bold
+- Email + phone: `#64748B`, 13px, DM Sans
+
+---
+
+### SECTION 2 — MENU LIST (white cards, full width, separated by thin dividers)
+
+Each menu item is a full-width tappable row (52px height):
+```
+[Icon]  Menu Item Label              [ChevronRight →]
+```
+
+**Menu Items:**
+
+```
+┌─────────────────────────────────────────┐
+│ 👤  Edit Profile                     >  │  → Screen B.1
+├─────────────────────────────────────────┤
+│ 🔒  Change Password                  >  │  → Screen B.2
+├─────────────────────────────────────────┤
+│ 🌐  Preferred Language               >  │  → Language picker
+├─────────────────────────────────────────┤
+│ 🔔  Notification Preferences         >  │  → Screen B.3
+├─────────────────────────────────────────┤
+│ 📄  Terms & Conditions               >  │  → Terms viewer
+├─────────────────────────────────────────┤
+│ 🔏  Privacy Policy                   >  │  → Privacy viewer
+├─────────────────────────────────────────┤
+│ ❓  Help & Support                   >  │  → Screen B.4
+├─────────────────────────────────────────┤
+│ 🐛  Report an Issue                  >  │  → Bug report form
+├─────────────────────────────────────────┤
+│ 🚪  Logout                              │  → Logout confirmation dialog
+└─────────────────────────────────────────┘
+```
+
+- Icon: 20px, `#64748B`, inside 36px `#F8FAFC` circle
+- Label: 15px, `#0F172A`, DM Sans
+- Chevron: `#CBD5E1`, 16px (not shown on Logout)
+- **Logout row:** label is `#DC2626` (red), no chevron, no icon circle background
+
+### App Version Footer
+```
+Patient Visit Schedule  v2.1.0
+© 2025 MTB Health Technologies
+```
+- Centered, 12px, `#94A3B8`, 24px padding top
+
+---
+
+# SCREEN B.1 — EDIT PROFILE
+## (Navigated from Profile menu → Edit Profile)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Edit Profile"**
+- **"Save"** text button (right, `#2563EB`, bold) — disabled until a field is changed
+
+## CONTENT
+
+```
+[Avatar 80px + camera icon]
+     ↕ centered top
+
+Full Name*
+[Priya Kapoor                    ]
+
+Date of Birth*
+[15 / 08 / 1992          📅]
+
+Gender*
+[Female                      ▼ ]
+
+Phone Number
+[+91] [98765 43210              ]
+⚠ "Changing this will notify your research team and require OTP verification"
+
+Email ID
+[priya.k@gmail.com              ]
+⚠ "Changing this will notify your research team and require OTP verification"
+
+Preferred Language
+[English                     ▼ ]
+```
+
+- Warning notices under Phone and Email: amber-50 bg, amber border, AlertTriangle icon, 12px text
+- All fields pre-filled with current data
+- Editable fields: Full Name, DOB, Gender, Language (immediate save)
+- Phone + Email: tapping them shows the warning notice prominently → requires OTP step to confirm change
+
+**Phone/Email Change Flow (when user edits these fields):**
+1. User changes phone number → taps Save
+2. Modal appears: "Verify new phone number"
+   - "We'll send an OTP to +91 XXXXXXXXXX"
+   - **[Send OTP]** → goes to OTP screen → on success, updates phone
+3. Research team gets an in-app notification of the change
+
+**[Save Changes]** full-width navy button at bottom
+
+---
+
+# SCREEN B.2 — CHANGE PASSWORD
+## (Navigated from Profile menu → Change Password)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Change Password"**
+
+## CONTENT
+
+```
+Current Password*
+[••••••••              👁]
+
+New Password*
+[                      👁]
+
+Password Strength:
+[■][■][□][□][□]  Weak
+
+Rules checklist:
+✗  Minimum 8 characters
+✗  Uppercase letter (A-Z)
+✗  Lowercase letter (a-z)
+✗  Numeric character (0-9)
+✗  Special character (!@#$%...)
+
+Confirm New Password*
+[                      👁]
+✗ Passwords do not match
+```
+
+- Strength bar: 5 segments
+  - 1-2 filled = red = "Weak"
+  - 3 filled = amber = "Medium"
+  - 4-5 filled = green = "Strong"
+- Rules: red X icon when not met, green check icon when met
+- Match indicator below confirm field: red "✗ Passwords do not match" / green "✓ Passwords match"
+- Eye icon toggles visibility on all 3 fields independently
+
+**[Update Password]** full-width navy button
+- Disabled: until current password filled + all 5 rules met + passwords match
+- Success: green toast "Password updated successfully" + auto-navigate back to Profile
+
+---
+
+# SCREEN B.3 — NOTIFICATION PREFERENCES
+## (Navigated from Profile menu → Notification Preferences)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Notification Preferences"**
+
+## CONTENT
+
+```
+Visit Reminders
+─────────────────────────────────────
+Push Notifications          [toggle ON ]
+SMS Reminders               [toggle ON ]
+Email Reminders             [toggle OFF]
+
+Remind me before visit:
+  ○ 1 day before
+  ● 2 days before   ← selected
+  ○ 3 days before
+
+──────────────────────────────────────
+
+Medication Reminders
+─────────────────────────────────────
+Push Notifications          [toggle ON ]
+SMS Reminders               [toggle ON ]
+
+──────────────────────────────────────
+
+General Notifications
+─────────────────────────────────────
+Trial Updates               [toggle ON ]
+Messages from PI            [toggle ON ]
+System Notifications        [toggle OFF]
+```
+
+- Toggle switches: ON = `#0D9488` (teal), OFF = `#CBD5E1`
+- Radio buttons for visit reminder timing
+- **[Save Preferences]** navy button at bottom
+- Success: toast "Preferences saved"
+
+---
+
+# SCREEN B.4 — HELP & SUPPORT
+## (Navigated from Profile menu → Help & Support)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Help & Support"**
+
+## CONTENT
+
+### Quick Action Cards (3 cards, full width, white, shadow)
+
+```
+┌─────────────────────────────────────────┐
+│ ❓  Frequently Asked Questions        > │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 💬  Contact Support                   > │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 🐛  Report an Issue                   > │
+└─────────────────────────────────────────┘
+```
+
+### Contact Information Card
+```
+┌─────────────────────────────────────────┐
+│  Contact Us                             │
+│                                         │
+│  📧  support@patientvisitschedule.com   │
+│  📞  1800-XXX-XXXX (Toll Free)          │
+│  🕐  Mon – Fri, 9:00 AM – 6:00 PM      │
+└─────────────────────────────────────────┘
+```
+
+**FAQ sub-screen (tap FAQ card):**
+- Back arrow + "FAQ"
+- Accordion list of Q&A items:
+  - "How do I view my upcoming visit?" → expands answer
+  - "What if I miss a visit?" → expands
+  - "How do I contact my research team?" → expands
+  - "Can I change my phone number?" → expands
+  - "How are medication reminders set?" → expands
+- Each item: ChevronDown rotates to ChevronUp when expanded
+
+**Contact Support sub-screen (tap Contact Support):**
+- Back arrow + "Contact Support"
+- Form:
+  - Issue Category (dropdown): Login Issue / Notification Problem / App Bug / Visit Query / Other
+  - Subject (text input)
+  - Description (textarea, 5 rows)
+  - Attach Screenshot (optional, file picker button)
+- **[Submit Ticket]** navy button
+- Success: "Ticket submitted! We'll respond within 24 hours." + ticket ID shown
+
+---
+
+## LOGOUT FLOW
+
+**Tapping "Logout" on Profile menu:**
+
+1. Confirmation dialog appears (modal overlay):
+
+```
+┌───────────────────────────────┐
+│                               │
+│        Log Out?               │
+│                               │
+│  Are you sure you want to     │
+│  log out of Patient Visit     │
+│  Schedule?                    │
+│                               │
+│  [    Cancel    ] [  Log Out ]│
+│    (outlined)      (red fill) │
+│                               │
+└───────────────────────────────┘
+```
+
+2. Tap **[Log Out]** →
+   - Show brief loading spinner
+   - Clear session
+   - Navigate to **Welcome Screen** (Screen 1.1)
+   - Show green toast briefly on Welcome screen: "Logged out successfully"
+
+3. Tap **[Cancel]** → dismiss dialog, stay on Profile screen
+
+---
+
+## LANGUAGE PICKER (from Preferred Language menu item)
+
+Bottom sheet (50% height):
+- Title: "Preferred Language"
+- List of languages with radio button:
+  - 🔵 English (selected)
+  - ○ Hindi — हिंदी
+  - ○ Tamil — தமிழ்
+  - ○ Telugu — తెలుగు
+  - ○ Kannada — ಕನ್ನಡ
+  - ○ Malayalam — മലയാളം
+  - ○ Bengali — বাংলা
+  - ○ Marathi — मराठी
+- **[Apply]** navy button at bottom
+- On apply: show toast "Language updated to Hindi" + app UI language switches
+
+---
+
+## TERMS & CONDITIONS / PRIVACY POLICY VIEWER
+(from Profile menu → Terms & Conditions or Privacy Policy)
+
+Full screen viewer (NOT bottom sheet here — since user is intentionally opening to read, not during registration):
+
+- App bar: back arrow + "Terms & Conditions" (or "Privacy Policy")
+- Version info: "Version 2.1 · Effective 1 Jan 2025" (gray, 13px)
+- Full scrollable document text (same content as registration bottom sheet)
+- "You accepted this on 15 March 2025" (green check + date, bottom of content)
+- NO action button needed (already accepted during registration)
+
+---
+
+## SUMMARY — NAVIGATION MAP
+
+```
+Patient Dashboard
+│
+├── 🔔 Bell Icon
+│       └── Notifications Screen
+│               ├── [filter chips] All/Visits/Medication/Trials/System
+│               ├── [notification card tap] → Notification Detail Screen
+│               │       └── [action button] → Visit Detail / Medication / Chat / About Trial
+│               └── [long press] → Bulk select mode → Delete / Stop
+│
+└── 🟣 PK Avatar
+        └── Profile & Settings Screen
+                ├── Edit Profile → (phone/email change requires OTP)
+                ├── Change Password
+                ├── Preferred Language → Language bottom sheet
+                ├── Notification Preferences
+                ├── Terms & Conditions → Full screen viewer
+                ├── Privacy Policy → Full screen viewer
+                ├── Help & Support
+                │       ├── FAQ → Accordion list
+                │       ├── Contact Support → Ticket form
+                │       └── Report Issue → Bug report form
+                └── Logout → Confirmation dialog → Welcome Screen
+```
+
+---
+
+*End of Patient Dashboard Icon Navigation Prompt*
+*Bell Icon → Full Notifications Screen with detail view*
+*Avatar → Full Profile & Settings with 6 sub-screens*

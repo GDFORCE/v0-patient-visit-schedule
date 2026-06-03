@@ -106,7 +106,7 @@ export function InvitePatientScreen({ onBack, onSuccess }: InvitePatientScreenPr
           </Button>
           <Button
             onClick={onSuccess || onBack}
-            className="w-full mt-3 h-11 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl"
+            className="w-full mt-3 h-11 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl"
           >
             Done
           </Button>
@@ -218,7 +218,7 @@ export function InvitePatientScreen({ onBack, onSuccess }: InvitePatientScreenPr
         <Button
           onClick={handleSendInvitation}
           disabled={!canSend || sending}
-          className="w-full h-12 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-medium disabled:bg-gray-300"
+          className="w-full h-12 bg-[#2563EB] hover:bg-[#1A3872] text-white rounded-xl font-medium disabled:bg-gray-300"
         >
           {sending ? (
             <div className="flex items-center gap-2">

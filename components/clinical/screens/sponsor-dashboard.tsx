@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   LayoutDashboard, FlaskConical, MapPin, Bell, User, MessageCircle,
   ChevronRight, ChevronDown, Plus, Search, TrendingUp,
@@ -13,21 +13,38 @@ import { cn } from "@/lib/utils"
 
 interface SponsorDashboardProps {
   onNavigate: (screen: string) => void
+  /** When set, the dashboard opens directly on this trial's summary (e.g. after saving a schedule). */
+  initialTrialId?: string
 }
 
 const mockData = {
   user: { name: "Rajesh Kumar", initials: "RK", role: "Sponsor Admin", org: "PharmaCo Ltd", email: "rajesh.kumar@pharmaco.com", phone: "+91 98765 43210" },
   trials: [
-    { id: "Protocol-001", name: "Diabetes Phase II", phase: "Phase II", indication: "Type 2 Diabetes", sponsor: "PharmaCo Ltd", status: "Active", sites: 3, screened: 48, enrolled: 45, target: 100, completed: 12, screenFail: 8, withdrawn: 3, dropouts: 2, scheduleVersion: "v3", lastModified: "12 May 2025", modifiedBy: "Dr. Sharma" },
-    { id: "Protocol-002", name: "Hypertension Study", phase: "Phase III", indication: "Hypertension", sponsor: "PharmaCo Ltd", status: "Active", sites: 2, screened: 32, enrolled: 28, target: 60, completed: 5, screenFail: 4, withdrawn: 1, dropouts: 0, scheduleVersion: "v1", lastModified: "8 May 2025", modifiedBy: "Dr. Rao" },
-    { id: "Protocol-003", name: "Oncology Phase I", phase: "Phase I", indication: "NSCLC", sponsor: "PharmaCo Ltd", status: "Completed", sites: 1, screened: 20, enrolled: 18, target: 20, completed: 18, screenFail: 2, withdrawn: 0, dropouts: 0, scheduleVersion: "v2", lastModified: "1 May 2025", modifiedBy: "Admin" },
-    { id: "Protocol-004", name: "Cardiology Trial", phase: "Phase II", indication: "Heart Failure", sponsor: "PharmaCo Ltd", status: "Terminated", sites: 2, screened: 15, enrolled: 12, target: 40, completed: 0, screenFail: 3, withdrawn: 4, dropouts: 2, scheduleVersion: "v1", lastModified: "10 Apr 2025", modifiedBy: "Admin" },
+    { id: "Protocol-001", name: "Diabetes Phase II", phase: "Phase II", indication: "Type 2 Diabetes", drug: "Metformin XR", duration: "18 months", ctri: "CTRI/2024/001", totalVisits: 18, sponsor: "PharmaCo Ltd", status: "Active", sites: 3, screened: 48, enrolled: 45, target: 100, completed: 12, screenFail: 8, randomized: 40, withdrawn: 3, dropouts: 2, followUp: 23, scheduleVersion: "v3", lastModified: "12 May 2025", modifiedBy: "Dr. Sharma" },
+    { id: "Protocol-002", name: "Hypertension Study", phase: "Phase III", indication: "Hypertension", drug: "Amlodipine", duration: "24 months", ctri: "CTRI/2024/002", totalVisits: 12, sponsor: "PharmaCo Ltd", status: "Active", sites: 2, screened: 32, enrolled: 28, target: 60, completed: 5, screenFail: 4, randomized: 28, withdrawn: 1, dropouts: 0, followUp: 22, scheduleVersion: "v1", lastModified: "8 May 2025", modifiedBy: "Dr. Rao" },
+    { id: "Protocol-003", name: "Oncology Phase I", phase: "Phase I", indication: "NSCLC", drug: "Osimertinib", duration: "12 months", ctri: "CTRI/2023/045", totalVisits: 8, sponsor: "PharmaCo Ltd", status: "Completed", sites: 1, screened: 20, enrolled: 18, target: 20, completed: 18, screenFail: 2, randomized: 18, withdrawn: 0, dropouts: 0, followUp: 0, scheduleVersion: "v2", lastModified: "1 May 2025", modifiedBy: "Admin" },
+    { id: "Protocol-004", name: "Cardiology Trial", phase: "Phase II", indication: "Heart Failure", drug: "Sacubitril/Valsartan", duration: "18 months", ctri: "CTRI/2024/078", totalVisits: 14, sponsor: "PharmaCo Ltd", status: "Terminated", sites: 2, screened: 15, enrolled: 12, target: 40, completed: 0, screenFail: 3, randomized: 10, withdrawn: 4, dropouts: 2, followUp: 4, scheduleVersion: "v1", lastModified: "10 Apr 2025", modifiedBy: "Admin" },
   ],
   sites: [
-    { id: "SITE-001", name: "Apollo Mumbai", hospital: "Apollo Hospitals Mumbai", city: "Mumbai", state: "Maharashtra", status: "Active", pi: "Dr. Rajesh Sharma", piEmail: "r.sharma@apollo.com", piPhone: "+91 98100 12345", crc: "Ms. Priya Desai", enrolled: 72, target: 85, enrollmentPct: 85, trials: ["Protocol-001", "Protocol-002"], patients: 72, visitCompliance: 89, overdueVisits: 3 },
-    { id: "SITE-002", name: "Max Delhi", hospital: "Max Super Speciality Hospital", city: "New Delhi", state: "Delhi", status: "Active", pi: "Dr. Sunita Rao", piEmail: "s.rao@maxhealthcare.com", piPhone: "+91 98200 23456", crc: "Mr. Amit Singh", enrolled: 43, target: 60, enrollmentPct: 72, trials: ["Protocol-001"], patients: 43, visitCompliance: 94, overdueVisits: 1 },
-    { id: "SITE-003", name: "Fortis Bangalore", hospital: "Fortis Hospital Bangalore", city: "Bengaluru", state: "Karnataka", status: "Completed", pi: "Dr. Anand Krishnan", piEmail: "a.krishnan@fortishealthcare.com", piPhone: "+91 98300 34567", crc: "Ms. Kavitha Nair", enrolled: 32, target: 50, enrollmentPct: 65, trials: ["Protocol-003"], patients: 32, visitCompliance: 87, overdueVisits: 0 },
-    { id: "SITE-004", name: "AIIMS Delhi", hospital: "All India Institute of Medical Sciences", city: "New Delhi", state: "Delhi", status: "Terminated", pi: "Dr. Meera Pillai", piEmail: "m.pillai@aiims.ac.in", piPhone: "+91 98400 45678", crc: "Dr. Rajan Verma", enrolled: 12, target: 40, enrollmentPct: 30, trials: ["Protocol-004"], patients: 12, visitCompliance: 60, overdueVisits: 0 },
+    { id: "SITE-001", name: "Apollo Mumbai", hospital: "Apollo Hospitals Mumbai", city: "Mumbai", state: "Maharashtra", status: "Active", pi: "Dr. Rajesh Sharma", piEmail: "r.sharma@apollo.com", piPhone: "+91 98100 12345", crc: "Ms. Priya Desai", enrolled: 72, target: 85, enrollmentPct: 85, trials: ["Protocol-001", "Protocol-002"], patients: 72, visitCompliance: 89, overdueVisits: 3, department: "Endocrinology", screened: 80, screenFail: 8, randomized: 70, withdrawn: 3, dropouts: 2, followUp: 55, completed: 12 },
+    { id: "SITE-002", name: "Max Delhi", hospital: "Max Super Speciality Hospital", city: "New Delhi", state: "Delhi", status: "Active", pi: "Dr. Sunita Rao", piEmail: "s.rao@maxhealthcare.com", piPhone: "+91 98200 23456", crc: "Mr. Amit Singh", enrolled: 43, target: 60, enrollmentPct: 72, trials: ["Protocol-001"], patients: 43, visitCompliance: 94, overdueVisits: 1, department: "Cardiology", screened: 50, screenFail: 5, randomized: 42, withdrawn: 1, dropouts: 0, followUp: 37, completed: 5 },
+    { id: "SITE-003", name: "Fortis Bangalore", hospital: "Fortis Hospital Bangalore", city: "Bengaluru", state: "Karnataka", status: "Completed", pi: "Dr. Anand Krishnan", piEmail: "a.krishnan@fortishealthcare.com", piPhone: "+91 98300 34567", crc: "Ms. Kavitha Nair", enrolled: 32, target: 50, enrollmentPct: 65, trials: ["Protocol-003"], patients: 32, visitCompliance: 87, overdueVisits: 0, department: "Oncology", screened: 36, screenFail: 4, randomized: 32, withdrawn: 0, dropouts: 0, followUp: 14, completed: 18 },
+    { id: "SITE-004", name: "AIIMS Delhi", hospital: "All India Institute of Medical Sciences", city: "New Delhi", state: "Delhi", status: "Terminated", pi: "Dr. Meera Pillai", piEmail: "m.pillai@aiims.ac.in", piPhone: "+91 98400 45678", crc: "Dr. Rajan Verma", enrolled: 12, target: 40, enrollmentPct: 30, trials: ["Protocol-004"], patients: 12, visitCompliance: 60, overdueVisits: 0, department: "Cardiology", screened: 15, screenFail: 3, randomized: 10, withdrawn: 4, dropouts: 2, followUp: 4, completed: 0 },
+  ],
+  // De-identified subject roster — sponsors see aggregate / coded data only (no patient PII).
+  patients: [
+    { id: "SUBJ-001", trial: "Protocol-001", site: "Apollo Mumbai", status: "Active", enrolled: "12 Mar 2025", age: 54, sex: "F" },
+    { id: "SUBJ-002", trial: "Protocol-001", site: "Apollo Mumbai", status: "Active", enrolled: "15 Mar 2025", age: 61, sex: "M" },
+    { id: "SUBJ-003", trial: "Protocol-001", site: "Max Delhi", status: "Screening", enrolled: "2 Apr 2025", age: 47, sex: "F" },
+    { id: "SUBJ-004", trial: "Protocol-001", site: "Max Delhi", status: "Withdrawn", enrolled: "18 Feb 2025", age: 58, sex: "M" },
+    { id: "SUBJ-005", trial: "Protocol-002", site: "Apollo Mumbai", status: "Active", enrolled: "5 Apr 2025", age: 50, sex: "F" },
+    { id: "SUBJ-006", trial: "Protocol-002", site: "Max Delhi", status: "Active", enrolled: "9 Apr 2025", age: 65, sex: "M" },
+    { id: "SUBJ-007", trial: "Protocol-002", site: "Max Delhi", status: "Screening", enrolled: "20 Apr 2025", age: 43, sex: "F" },
+    { id: "SUBJ-008", trial: "Protocol-003", site: "Fortis Bangalore", status: "Completed", enrolled: "10 Jan 2025", age: 60, sex: "M" },
+    { id: "SUBJ-009", trial: "Protocol-003", site: "Fortis Bangalore", status: "Completed", enrolled: "14 Jan 2025", age: 57, sex: "F" },
+    { id: "SUBJ-010", trial: "Protocol-003", site: "Fortis Bangalore", status: "Active", enrolled: "22 Jan 2025", age: 49, sex: "M" },
+    { id: "SUBJ-011", trial: "Protocol-004", site: "AIIMS Delhi", status: "Withdrawn", enrolled: "8 Mar 2025", age: 62, sex: "F" },
+    { id: "SUBJ-012", trial: "Protocol-004", site: "AIIMS Delhi", status: "Active", enrolled: "11 Mar 2025", age: 55, sex: "M" },
   ],
   notifications: [
     { id: 1, type: "trial", title: "Protocol-002 shared with Apollo Mumbai", message: "Hypertension Study has been assigned to the site. PI Dr. Sharma has been notified.", time: "2h ago", unread: true },
@@ -60,31 +77,147 @@ function ProgressBar({ value, color = "bg-[#2563EB]" }: { value: number; color?:
   )
 }
 
-export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
+// Composite site performance (core model from docs/SITE_SCORING.md, using available data):
+// 35% enrollment achievement + 35% visit compliance + 30% protocol adherence (overdue-based).
+function sitePerformance(s: { enrolled: number; target: number; visitCompliance: number; overdueVisits: number; patients: number }) {
+  const enrollment = Math.min((s.enrolled / s.target) * 100, 100)
+  const compliance = s.visitCompliance
+  const adherence = s.patients > 0 ? Math.max(0, (1 - s.overdueVisits / s.patients) * 100) : 100
+  return Math.round(0.35 * enrollment + 0.35 * compliance + 0.30 * adherence)
+}
+
+export function SponsorDashboard({ onNavigate, initialTrialId }: SponsorDashboardProps) {
   const [activeTab, setActiveTab] = useState("dashboard")
+  const [trials, setTrials] = useState(mockData.trials)
   const [trialFilter, setTrialFilter] = useState("All")
+  const [phaseFilter, setPhaseFilter] = useState("All")
+  const [showTrialFilters, setShowTrialFilters] = useState(false)
   const [siteFilter, setSiteFilter] = useState("All")
   const [notifFilter, setNotifFilter] = useState("All")
-  const [selectedTrial, setSelectedTrial] = useState<typeof mockData.trials[0] | null>(null)
+  const [selectedTrial, setSelectedTrial] = useState<typeof trials[0] | null>(null)
   const [selectedSite, setSelectedSite] = useState<typeof mockData.sites[0] | null>(null)
+  const [editingTrial, setEditingTrial] = useState<typeof trials[0] | null>(null)
+  const [editDraft, setEditDraft] = useState({ name: "", phase: "", indication: "", drug: "", duration: "", target: "", status: "Active" })
   const [trialSearch, setTrialSearch] = useState("")
   const [siteSearch, setSiteSearch] = useState("")
   const [notifications, setNotifications] = useState(mockData.notifications)
   const [meSection, setMeSection] = useState<string | null>(null)
+  const [sites, setSites] = useState(mockData.sites)
+  const [showAddSite, setShowAddSite] = useState(false)
+  const [siteEntryMode, setSiteEntryMode] = useState<"single" | "upload">("single")
+  const [newSite, setNewSite] = useState({
+    protocolId: "", siteName: "", siteAddress: "", piName: "", department: "",
+    piEmail: "", accessType: "Patient Management",
+  })
+  const [addSiteSuccess, setAddSiteSuccess] = useState(false)
+  const [uploadedDocs, setUploadedDocs] = useState<string[]>([])
+  const docInputRef = useRef<HTMLInputElement>(null)
+  const [showShareTrial, setShowShareTrial] = useState(false)
+  const [shareForm, setShareForm] = useState({ fullName: "", designation: "", email: "", phone: "", accessType: "View Access" })
+  const [shareSuccess, setShareSuccess] = useState(false)
+
+  const handleShareTrial = () => {
+    if (!shareForm.email) return
+    setShareSuccess(true)
+    setTimeout(() => {
+      setShareSuccess(false)
+      setShowShareTrial(false)
+      setShareForm({ fullName: "", designation: "", email: "", phone: "", accessType: "View Access" })
+    }, 1400)
+  }
+
+  // Auto-populate Panel 1 when a valid Protocol ID is entered.
+  const addSiteTrial = trials.find(
+    t => t.id.toLowerCase() === newSite.protocolId.trim().toLowerCase()
+  )
+
+  // Open straight to a trial's summary when requested (e.g. after a schedule is saved).
+  useEffect(() => {
+    if (initialTrialId) {
+      const t = trials.find(tr => tr.id === initialTrialId)
+      if (t) { setSelectedTrial(t); setActiveTab("dashboard") }
+    }
+  }, [initialTrialId])
+
+  const openEditTrial = (t: typeof trials[0]) => {
+    setEditDraft({ name: t.name, phase: t.phase, indication: t.indication, drug: t.drug, duration: t.duration, target: String(t.target), status: t.status })
+    setEditingTrial(t)
+  }
+
+  const saveEditTrial = () => {
+    if (!editingTrial) return
+    const updated = {
+      ...editingTrial,
+      name: editDraft.name,
+      phase: editDraft.phase,
+      indication: editDraft.indication,
+      drug: editDraft.drug,
+      duration: editDraft.duration,
+      target: parseInt(editDraft.target) || editingTrial.target,
+      status: editDraft.status,
+    }
+    setTrials(prev => prev.map(x => x.id === updated.id ? updated : x))
+    setSelectedTrial(updated)
+    setEditingTrial(null)
+  }
+
+  const handleAddSite = () => {
+    if (!newSite.siteName || !newSite.piName || !newSite.piEmail) return
+    const id = `SITE-00${sites.length + 1}`
+    setSites(prev => [...prev, {
+      id,
+      name: newSite.siteName,
+      hospital: newSite.siteAddress,
+      city: "",
+      state: "",
+      status: "Active",
+      pi: newSite.piName,
+      piEmail: newSite.piEmail,
+      piPhone: "",
+      crc: "",
+      enrolled: 0,
+      target: 0,
+      enrollmentPct: 0,
+      trials: addSiteTrial ? [addSiteTrial.id] : [],
+      patients: 0,
+      visitCompliance: 0,
+      overdueVisits: 0,
+      department: newSite.department,
+      screened: 0,
+      screenFail: 0,
+      randomized: 0,
+      withdrawn: 0,
+      dropouts: 0,
+      followUp: 0,
+      completed: 0,
+    }])
+    setAddSiteSuccess(true)
+    setTimeout(() => {
+      setAddSiteSuccess(false)
+      setShowAddSite(false)
+      setNewSite({ protocolId: "", siteName: "", siteAddress: "", piName: "", department: "", piEmail: "", accessType: "Patient Management" })
+    }, 1400)
+  }
 
   const unreadCount = notifications.filter(n => n.unread).length
 
-  const filteredTrials = mockData.trials.filter(t => {
+  const filteredTrials = trials.filter(t => {
     const matchesFilter = trialFilter === "All" || t.status === trialFilter
+    const matchesPhase = phaseFilter === "All" || t.phase === phaseFilter
     const matchesSearch = t.name.toLowerCase().includes(trialSearch.toLowerCase()) || t.id.toLowerCase().includes(trialSearch.toLowerCase())
-    return matchesFilter && matchesSearch
+    return matchesFilter && matchesPhase && matchesSearch
   })
 
-  const filteredSites = mockData.sites.filter(s => {
+  const filteredSites = sites.filter(s => {
     const matchesFilter = siteFilter === "All" || s.status === siteFilter
     const matchesSearch = s.name.toLowerCase().includes(siteSearch.toLowerCase())
     return matchesFilter && matchesSearch
   })
+
+  // ── Computed KPI totals (derived from data, not hardcoded) ──
+  const totalTrials = trials.length
+  const totalSites = sites.length
+  const totalPatients = sites.reduce((sum, s) => sum + s.patients, 0)
 
   const notifIconMap: Record<string, { icon: typeof Bell; bg: string; color: string }> = {
     trial: { icon: FlaskConical, bg: "bg-blue-100", color: "text-blue-600" },
@@ -92,6 +225,65 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
     overdue: { icon: AlertTriangle, bg: "bg-red-100", color: "text-red-600" },
     site: { icon: MapPin, bg: "bg-teal-100", color: "text-teal-600" },
     system: { icon: Info, bg: "bg-slate-100", color: "text-slate-600" },
+  }
+
+  // ── Edit Trial ──────────────────────────────────────────
+  if (editingTrial) {
+    const setField = (k: keyof typeof editDraft, v: string) => setEditDraft(p => ({ ...p, [k]: v }))
+    const inputCls = "w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872] bg-white"
+    return (
+      <div className="h-full flex flex-col bg-[#F8FAFC]">
+        <div className="bg-[#0D1B3E] text-white px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setEditingTrial(null)} className="p-1"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+          <span className="font-semibold flex-1">Edit Trial</span>
+        </div>
+        <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+          {/* Protocol ID — read-only */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Protocol ID</label>
+            <div className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">{editingTrial.id}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Study Title</label>
+            <input value={editDraft.name} onChange={e => setField("name", e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phase</label>
+            <select value={editDraft.phase} onChange={e => setField("phase", e.target.value)} className={inputCls}>
+              <option>Phase I</option><option>Phase II</option><option>Phase III</option><option>Phase IV</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Disease</label>
+            <input value={editDraft.indication} onChange={e => setField("indication", e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Drug</label>
+            <input value={editDraft.drug} onChange={e => setField("drug", e.target.value)} className={inputCls} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
+              <input value={editDraft.duration} onChange={e => setField("duration", e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample Size</label>
+              <input type="number" value={editDraft.target} onChange={e => setField("target", e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status of Trial</label>
+            <select value={editDraft.status} onChange={e => setField("status", e.target.value)} className={inputCls}>
+              <option>Active</option><option>Completed</option><option>Terminated</option>
+            </select>
+          </div>
+        </div>
+        <div className="px-4 py-4 bg-white border-t border-slate-100 flex gap-3">
+          <button onClick={() => setEditingTrial(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-semibold">Cancel</button>
+          <button onClick={saveEditTrial} className="flex-1 bg-[#0D1B3E] text-white rounded-xl py-3 text-sm font-semibold">Save Changes</button>
+        </div>
+      </div>
+    )
   }
 
   // ── Trial Detail ────────────────────────────────────────
@@ -106,89 +298,224 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
           <Download className="w-5 h-5" />
         </div>
         <div className="flex-1 overflow-auto pb-24 px-4 py-4 space-y-4">
-          {/* Hero */}
+
+          {/* PANEL 1 — Trial Details */}
           <div className="bg-[#0D1B3E] rounded-2xl p-5 text-white">
             <div className="flex items-start justify-between mb-3">
               <span className="px-2 py-0.5 bg-blue-500/30 text-blue-200 text-xs rounded-full font-medium">{t.id}</span>
               <StatusBadge status={t.status} />
             </div>
-            <h2 className="text-lg font-bold mb-1">{t.name}</h2>
-            <p className="text-blue-200 text-sm mb-1">Sponsor: {t.sponsor}</p>
-            <p className="text-blue-200 text-xs">Phase: {t.phase} · CTRI: CTRI/2024/001</p>
-            <p className="text-blue-200 text-xs">Duration: 18 months · 18 visits total</p>
-          </div>
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { label: "Total Sites", val: t.sites },
-              { label: "Screened", val: t.screened },
-              { label: "Enrolled", val: t.enrolled },
-              { label: "Completed", val: t.completed },
-            ].map(s => (
-              <div key={s.label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
-                <p className="text-lg font-bold text-[#0D1B3E]">{s.val}</p>
-                <p className="text-[10px] text-slate-500 leading-tight">{s.label}</p>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "Screen Fail", val: t.screenFail, color: "text-red-600" },
-              { label: "Withdrawn", val: t.withdrawn, color: "text-amber-600" },
-              { label: "Dropouts", val: (t as any).dropouts ?? 0, color: "text-orange-600" },
-            ].map(s => (
-              <div key={s.label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
-                <p className={`text-lg font-bold ${s.color}`}>{s.val}</p>
-                <p className="text-[10px] text-slate-500 leading-tight">{s.label}</p>
-              </div>
-            ))}
-          </div>
-          {/* Sites on trial */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold text-sm text-[#0F172A]">Sites on this Trial</p>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {mockData.sites.filter(s => s.trials.includes(t.id)).map(site => (
-                <div key={site.id} className="flex-shrink-0 w-44 bg-slate-50 rounded-xl p-3 border border-slate-100">
-                  <p className="font-medium text-sm text-[#0F172A] truncate">{site.name}</p>
-                  <p className="text-xs text-slate-500">PI: {site.pi.split(" ").slice(-1)[0]}</p>
-                  <p className="text-xs text-slate-500 mb-2">{site.enrolled}/{site.target} enrolled</p>
-                  <ProgressBar value={site.enrollmentPct} />
-                  <p className="text-xs text-slate-400 mt-1">{site.enrollmentPct}%</p>
+            <h2 className="text-lg font-bold mb-3">{t.name}</h2>
+            <div className="grid grid-cols-2 gap-y-2.5 gap-x-3">
+              {[
+                { label: "CTRI Number", val: t.ctri },
+                { label: "Phase", val: t.phase },
+                { label: "Disease", val: t.indication },
+                { label: "Drug", val: t.drug },
+                { label: "Duration", val: t.duration },
+                { label: "Total Visits", val: t.totalVisits },
+              ].map(f => (
+                <div key={f.label}>
+                  <p className="text-[10px] text-blue-200/80 uppercase tracking-wide">{f.label}</p>
+                  <p className="text-sm font-medium">{f.val}</p>
                 </div>
               ))}
             </div>
-            <button className="w-full mt-3 border border-[#2563EB] text-[#2563EB] rounded-xl py-2 text-sm font-semibold">+ Add Site to Trial</button>
           </div>
-          {/* Enrollment */}
+
+          {/* PANEL 2 — Recruitment Details Across All Sites */}
           <div className="bg-white rounded-2xl border border-slate-100 p-4">
-            <p className="font-semibold text-sm text-[#0F172A] mb-3">Enrollment Progress</p>
-            <ProgressBar value={Math.round((enrolled / target) * 100)} />
-            <p className="text-xs text-slate-500 mt-1">{enrolled} / {target} enrolled ({Math.round((enrolled / target) * 100)}%)</p>
-            <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
-              {[{ label: "Screen Fail", val: t.screenFail, color: "text-red-600" }, { label: "Withdrawn", val: t.withdrawn, color: "text-slate-600" }].map(s => (
-                <div key={s.label}><span className="text-slate-500">{s.label}: </span><span className={cn("font-semibold", s.color)}>{s.val}</span></div>
+            <p className="font-semibold text-sm text-[#0F172A] mb-3">Recruitment · Across All Sites</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-slate-50 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-[#0D1B3E]">{t.sites}</p><p className="text-[10px] text-slate-500">Total Sites</p></div>
+              <div className="bg-slate-50 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-[#0D1B3E]">{t.target}</p><p className="text-[10px] text-slate-500">Sample Size</p></div>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              {[
+                { label: "Screened", val: t.screened, color: "text-[#0F172A]" },
+                { label: "Screen Fail", val: t.screenFail, color: "text-red-600" },
+                { label: "Randomized", val: t.randomized, color: "text-[#0F172A]" },
+                { label: "Withdrawn", val: t.withdrawn, color: "text-amber-600" },
+                { label: "Dropout", val: t.dropouts, color: "text-orange-600" },
+                { label: "Follow-up", val: t.followUp, color: "text-[#0D9488]" },
+                { label: "Completed", val: t.completed, color: "text-[#0D9488]" },
+              ].map(m => (
+                <div key={m.label} className="bg-slate-50 rounded-lg p-1.5 text-center border border-slate-100">
+                  <p className={cn("text-sm font-bold leading-none", m.color)}>{m.val}</p>
+                  <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{m.label}</p>
+                </div>
               ))}
             </div>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Enrolment</p>
+            <ProgressBar value={Math.round((enrolled / target) * 100)} />
+            <p className="text-xs text-slate-500 mt-1">{enrolled} / {target} enrolled ({Math.round((enrolled / target) * 100)}%)</p>
           </div>
-          {/* Documents */}
+
+          {/* PANEL 3 — Sites (per-site recruitment status) */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-sm text-[#0F172A]">Sites · Recruitment Status</p>
+              <button
+                onClick={() => { setNewSite(p => ({ ...p, protocolId: t.id })); setSelectedTrial(null); setActiveTab("sites"); setShowAddSite(true) }}
+                className="text-[#2563EB] text-xs font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" />Add Site</button>
+            </div>
+            <div className="space-y-3">
+              {sites.filter(s => s.trials.includes(t.id)).map(site => (
+                <div key={site.id} className="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                  <p className="font-semibold text-sm text-[#0F172A]">{site.name}</p>
+                  <p className="text-xs text-slate-500 flex items-start gap-1"><MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />{site.hospital}, {site.city}, {site.state}</p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2 mb-2">
+                    <p className="text-xs text-slate-500">PI: <span className="text-[#0F172A]">{site.pi}</span></p>
+                    <p className="text-xs text-slate-500">Dept: <span className="text-[#0F172A]">{site.department}</span></p>
+                    <p className="text-xs text-slate-500 col-span-2 truncate">{site.piEmail}</p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { label: "Screened", val: site.screened, color: "text-[#0F172A]" },
+                      { label: "Screen Fail", val: site.screenFail, color: "text-red-600" },
+                      { label: "Randomized", val: site.randomized, color: "text-[#0F172A]" },
+                      { label: "Withdrawn", val: site.withdrawn, color: "text-amber-600" },
+                      { label: "Dropout", val: site.dropouts, color: "text-orange-600" },
+                      { label: "Follow-up", val: site.followUp, color: "text-[#0D9488]" },
+                      { label: "Completed", val: site.completed, color: "text-[#0D9488]" },
+                    ].map(m => (
+                      <div key={m.label} className="bg-white rounded-lg p-1.5 text-center border border-slate-100">
+                        <p className={cn("text-sm font-bold leading-none", m.color)}>{m.val}</p>
+                        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {sites.filter(s => s.trials.includes(t.id)).length === 0 && (
+                <p className="text-xs text-slate-400 italic">No sites added to this trial yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* PANEL 4 — Documents */}
           <div className="bg-white rounded-2xl border border-slate-100 p-4">
             <p className="font-semibold text-sm text-[#0F172A] mb-3">Documents</p>
-            {["Protocol Document", "Patient Information Sheet"].map(doc => (
-              <div key={doc} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="flex-1 text-sm text-[#0F172A]">{doc}</span>
-                <Download className="w-4 h-4 text-[#2563EB]" />
+            <div className="flex items-start gap-3 py-2 border-b border-slate-100">
+              <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-[#0F172A]">Uploaded Protocol</p>
+                <p className="text-[11px] text-slate-400">Uploaded by {t.modifiedBy} · {t.lastModified}, 10:32 AM</p>
+              </div>
+              <Download className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
+            </div>
+            <div className="flex items-start gap-3 py-2 border-b border-slate-100">
+              <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-[#0F172A]">Schedule Template</p>
+                <p className="text-[11px] text-slate-400">{t.scheduleVersion} · updated {t.lastModified} by {t.modifiedBy}</p>
+              </div>
+              <Download className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
+            </div>
+            <div className="py-2">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Version History</p>
+              <div className="space-y-1">
+                {[
+                  { v: t.scheduleVersion, note: `Current · ${t.lastModified} · ${t.modifiedBy}` },
+                  { v: "v2", note: "1 May 2025 · Admin" },
+                  { v: "v1", note: "10 Apr 2025 · Admin" },
+                ].map(h => (
+                  <div key={h.v} className="flex items-center gap-2 text-xs">
+                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-medium">{h.v}</span>
+                    <span className="text-slate-500">{h.note}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Newly uploaded documents */}
+            {uploadedDocs.map((name, i) => (
+              <div key={i} className="flex items-start gap-3 py-2 border-t border-slate-100">
+                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#0F172A] truncate">{name}</p>
+                  <p className="text-[11px] text-green-600">Uploaded by {mockData.user.name} · just now</p>
+                </div>
+                <Download className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
               </div>
             ))}
-            <button className="w-full mt-3 border border-[#2563EB] text-[#2563EB] rounded-xl py-2 text-sm font-semibold">+ Upload Document</button>
+            <input
+              ref={docInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setUploadedDocs(prev => [...prev, file.name])
+                e.target.value = ""
+              }}
+            />
+            <button onClick={() => docInputRef.current?.click()} className="w-full mt-2 border border-[#2563EB] text-[#2563EB] rounded-xl py-2 text-sm font-semibold">+ Upload Document</button>
           </div>
         </div>
+
+        {/* Bottom bar — Edit + Share Trial */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-3 bg-white border-t border-slate-100 flex gap-3">
-          <button className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-semibold">Edit Trial Details</button>
-          <button className="flex-1 bg-[#2563EB] text-white rounded-xl py-3 text-sm font-semibold">Share with Site ›</button>
+          <button onClick={() => openEditTrial(t)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-semibold">Edit</button>
+          <button onClick={() => setShowShareTrial(true)} className="flex-1 bg-[#2563EB] text-white rounded-xl py-3 text-sm font-semibold">Share Trial ›</button>
         </div>
+
+        {/* Share Trial overlay */}
+        {showShareTrial && (
+          <div className="absolute inset-0 z-50 bg-[#F8FAFC] flex flex-col">
+            <div className="bg-[#0D1B3E] text-white px-4 py-3 flex items-center gap-3">
+              <button onClick={() => setShowShareTrial(false)} className="p-1"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+              <span className="font-semibold flex-1">Share Trial</span>
+            </div>
+            {shareSuccess ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"><Check className="w-8 h-8 text-green-600" /></div>
+                <p className="font-bold text-[#0F172A] text-lg">Trial Shared!</p>
+                <p className="text-sm text-slate-500">{t.id} shared with {shareForm.email} ({shareForm.accessType}).</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+                  <p className="text-xs text-slate-500">Share this trial with members of your organization.</p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                    <input value={shareForm.fullName} onChange={e => setShareForm(p => ({ ...p, fullName: e.target.value }))} placeholder="Full name" className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Designation</label>
+                    <input value={shareForm.designation} onChange={e => setShareForm(p => ({ ...p, designation: e.target.value }))} placeholder="e.g. Clinical Project Manager" className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email ID <span className="text-red-500">*</span></label>
+                    <input type="email" value={shareForm.email} onChange={e => setShareForm(p => ({ ...p, email: e.target.value }))} placeholder="name@pharmaco.com" className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                    <input type="tel" value={shareForm.phone} onChange={e => setShareForm(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98XXXXXXXX" className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
+                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">{mockData.user.org}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Access Type</label>
+                    <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                      {(["View Access", "Edit Access"] as const).map(a => (
+                        <button key={a} onClick={() => setShareForm(p => ({ ...p, accessType: a }))}
+                          className={cn("flex-1 py-2.5 text-sm font-medium", shareForm.accessType === a ? "bg-[#1A3872] text-white" : "bg-white text-slate-600")}>{a}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-4 border-t border-slate-100">
+                  <button onClick={handleShareTrial} disabled={!shareForm.email}
+                    className={cn("w-full py-3.5 rounded-xl font-semibold text-sm transition-all", shareForm.email ? "bg-[#0D1B3E] text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed")}>
+                    Share Trial
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -285,24 +612,25 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
         {/* ── DASHBOARD TAB ── */}
         {activeTab === "dashboard" && (
           <div>
-            {/* KPI Strip */}
+            {/* KPI Strip — counts computed from data, each tile opens its list */}
             <div className="px-4 pt-4 pb-2">
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {[
-                  { icon: FlaskConical, val: "12", label: "Trials", sub: "+2 this month", bg: "bg-blue-50", iconColor: "text-[#2563EB]" },
-                  { icon: MapPin, val: "8", label: "Sites", sub: "6 active", bg: "bg-teal-50", iconColor: "text-[#0D9488]" },
+                  { icon: FlaskConical, val: totalTrials, label: "Total Trials", sub: "Across all protocols", bg: "bg-blue-50", iconColor: "text-[#2563EB]", tab: "trials" },
+                  { icon: MapPin, val: totalSites, label: "Total Sites", sub: `${sites.filter(s => s.status === "Active").length} active`, bg: "bg-teal-50", iconColor: "text-[#0D9488]", tab: "sites" },
+                  { icon: Users, val: totalPatients, label: "Total Patients", sub: "Across all trials", bg: "bg-purple-50", iconColor: "text-[#7C3AED]", tab: "patients" },
                 ].map(c => {
                   const Icon = c.icon
                   return (
-                    <div key={c.label} className={cn("flex-shrink-0 w-32 rounded-2xl p-4 border border-slate-100", c.bg)}>
+                    <button key={c.label} onClick={() => setActiveTab(c.tab)} className={cn("flex-shrink-0 w-32 rounded-2xl p-4 border border-slate-100 text-left", c.bg)}>
                       <div className="flex items-center gap-2 mb-1">
                         <Icon className={cn("w-4 h-4", c.iconColor)} />
-                        <TrendingUp className="w-3 h-3 text-green-500" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto" />
                       </div>
                       <p className="text-2xl font-bold text-[#0F172A]">{c.val}</p>
                       <p className="text-xs text-slate-500">{c.label}</p>
                       <p className="text-xs text-slate-400">{c.sub}</p>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -315,14 +643,23 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
                 <button onClick={() => setActiveTab("trials")} className="text-[#2563EB] text-sm font-medium flex items-center gap-1">See All <ChevronRight className="w-4 h-4" /></button>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {mockData.trials.filter(t => t.status === "Active").map(t => (
+                {trials.filter(t => t.status === "Active").map(t => (
                   <div key={t.id} onClick={() => setSelectedTrial(t)} className="flex-shrink-0 w-72 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm cursor-pointer">
+                    {/* Protocol ID + Status */}
                     <div className="flex items-center justify-between mb-2">
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{t.id}</span>
                       <StatusBadge status={t.status} />
                     </div>
-                    <h4 className="font-semibold text-[#0F172A] mb-1">{t.name}</h4>
-                    <p className="text-xs text-slate-500 mb-2">{t.sponsor} · {t.sites} Sites</p>
+                    {/* Study Title */}
+                    <h4 className="font-semibold text-[#0F172A] mb-2">{t.name}</h4>
+                    {/* Phase · Disease · Drug · Sites */}
+                    <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 mb-3">
+                      <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Phase</p><p className="text-xs font-medium text-[#0F172A]">{t.phase}</p></div>
+                      <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Disease</p><p className="text-xs font-medium text-[#0F172A]">{t.indication}</p></div>
+                      <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Drug</p><p className="text-xs font-medium text-[#0F172A]">{t.drug}</p></div>
+                      <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Sites</p><p className="text-xs font-medium text-[#0F172A]">{t.sites}</p></div>
+                    </div>
+                    {/* Enrollment Bar */}
                     <ProgressBar value={Math.round((t.enrolled / t.target) * 100)} />
                     <p className="text-xs text-slate-500 mt-1">{t.enrolled}/{t.target} enrolled</p>
                   </div>
@@ -352,8 +689,7 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
               <div className="flex gap-2">
                 {[
                   { label: "+ Add Trial", icon: Plus, onClick: () => onNavigate("add-trial"), color: "border-[#2563EB] text-[#2563EB]" },
-                  { label: "+ Add Site", icon: Plus, onClick: () => setActiveTab("sites"), color: "border-[#2563EB] text-[#2563EB]" },
-                  { label: "↗ Reports", icon: BarChart2, onClick: () => setActiveTab("me"), color: "border-slate-300 text-slate-600" },
+                  { label: "+ Add Site", icon: Plus, onClick: () => setShowAddSite(true), color: "border-[#2563EB] text-[#2563EB]" },
                 ].map(a => {
                   const Icon = a.icon
                   return (
@@ -394,34 +730,59 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
                 <Search className="w-4 h-4 text-slate-400" />
                 <input value={trialSearch} onChange={e => setTrialSearch(e.target.value)} placeholder="Search trials..." className="flex-1 text-sm outline-none" />
               </div>
-              <button className="p-2 bg-white border border-slate-200 rounded-xl"><SlidersHorizontal className="w-4 h-4 text-slate-500" /></button>
+              <button
+                onClick={() => setShowTrialFilters(v => !v)}
+                className={cn("p-2 rounded-xl border", showTrialFilters || phaseFilter !== "All" ? "bg-[#2563EB] border-[#2563EB]" : "bg-white border-slate-200")}>
+                <SlidersHorizontal className={cn("w-4 h-4", showTrialFilters || phaseFilter !== "All" ? "text-white" : "text-slate-500")} />
+              </button>
               <button onClick={() => onNavigate("add-trial")} className="p-2 bg-[#2563EB] rounded-xl"><Plus className="w-4 h-4 text-white" /></button>
             </div>
+            {/* Phase filter panel (toggled by the sliders button) */}
+            {showTrialFilters && (
+              <div className="bg-white border border-slate-200 rounded-xl p-3 mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Filter by Phase</p>
+                  {phaseFilter !== "All" && (
+                    <button onClick={() => setPhaseFilter("All")} className="text-[11px] text-[#2563EB] font-medium">Clear</button>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {["All", "Phase I", "Phase II", "Phase III", "Phase IV"].map(p => (
+                    <button key={p} onClick={() => setPhaseFilter(p)} className={cn("px-3 py-1.5 rounded-full text-xs font-medium border", phaseFilter === p ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white text-slate-600 border-slate-200")}>{p}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-              {["All (13)", "Active (9)", "Completed (2)", "Terminated (2)"].map(f => {
-                const val = f.split(" (")[0]
-                return (
-                  <button key={f} onClick={() => setTrialFilter(val)} className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border", trialFilter === val ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white text-slate-600 border-slate-200")}>{f}</button>
-                )
-              })}
+              {[
+                { label: `All (${trials.length})`, val: "All" },
+                { label: `Active (${trials.filter(t => t.status === "Active").length})`, val: "Active" },
+                { label: `Completed (${trials.filter(t => t.status === "Completed").length})`, val: "Completed" },
+                { label: `Terminated (${trials.filter(t => t.status === "Terminated").length})`, val: "Terminated" },
+              ].map(f => (
+                <button key={f.val} onClick={() => setTrialFilter(f.val)} className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border", trialFilter === f.val ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white text-slate-600 border-slate-200")}>{f.label}</button>
+              ))}
             </div>
             <div className="space-y-3">
               {filteredTrials.map(t => (
                 <div key={t.id} onClick={() => setSelectedTrial(t)} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm cursor-pointer">
+                  {/* Protocol ID + Status */}
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{t.id}</span>
                     <div className="flex items-center gap-2"><StatusBadge status={t.status} /><ChevronRight className="w-4 h-4 text-slate-400" /></div>
                   </div>
-                  <h4 className="font-semibold text-[#0F172A] text-sm mb-1">{t.name}</h4>
-                  <p className="text-xs text-slate-500 mb-2">{t.sponsor} · {t.sites} Sites</p>
-                  <ProgressBar value={Math.round((t.enrolled / t.target) * 100)} />
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-slate-500">{t.enrolled}/{t.target} enrolled</p>
-                    <div className="flex gap-2">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">{t.phase}</span>
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">{t.indication}</span>
-                    </div>
+                  {/* Study Title */}
+                  <h4 className="font-semibold text-[#0F172A] text-sm mb-2">{t.name}</h4>
+                  {/* Phase · Disease · Drug · Sites */}
+                  <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 mb-3">
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Phase</p><p className="text-xs font-medium text-[#0F172A]">{t.phase}</p></div>
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Disease</p><p className="text-xs font-medium text-[#0F172A]">{t.indication}</p></div>
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Drug</p><p className="text-xs font-medium text-[#0F172A]">{t.drug}</p></div>
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Sites</p><p className="text-xs font-medium text-[#0F172A]">{t.sites}</p></div>
                   </div>
+                  {/* Enrollment Bar */}
+                  <ProgressBar value={Math.round((t.enrolled / t.target) * 100)} />
+                  <p className="text-xs text-slate-500 mt-1">{t.enrolled}/{t.target} enrolled</p>
                 </div>
               ))}
             </div>
@@ -435,7 +796,11 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
             <div className="flex gap-3 mb-4">
               <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 flex-1">
                 <MapPin className="w-5 h-5 text-[#0D9488]" />
-                <div><p className="text-lg font-bold text-[#0D1B3E]">8</p><p className="text-xs text-slate-500">Total Sites</p></div>
+                <div><p className="text-lg font-bold text-[#0D1B3E]">{sites.length}</p><p className="text-xs text-slate-500">Total Sites</p></div>
+              </div>
+              <div className="bg-green-50 rounded-xl p-3 flex items-center gap-3 flex-1">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-0.5" />
+                <div><p className="text-lg font-bold text-green-700">{sites.filter(s => s.status === "Active").length}</p><p className="text-xs text-slate-500">Active</p></div>
               </div>
             </div>
             <div className="flex items-center gap-3 mb-3">
@@ -443,15 +808,17 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
                 <Search className="w-4 h-4 text-slate-400" />
                 <input value={siteSearch} onChange={e => setSiteSearch(e.target.value)} placeholder="Search sites..." className="flex-1 text-sm outline-none" />
               </div>
-              <button className="p-2 bg-[#2563EB] rounded-xl"><Plus className="w-4 h-4 text-white" /></button>
+              <button onClick={() => setShowAddSite(true)} className="p-2 bg-[#2563EB] rounded-xl"><Plus className="w-4 h-4 text-white" /></button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-              {["All (4)", "Active (2)", "Completed (1)", "Terminated (1)"].map(f => {
-                const val = f.split(" (")[0]
-                return (
-                  <button key={f} onClick={() => setSiteFilter(val)} className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border", siteFilter === val ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white text-slate-600 border-slate-200")}>{f}</button>
-                )
-              })}
+              {[
+                { label: `All (${sites.length})`, val: "All" },
+                { label: `Active (${sites.filter(s => s.status === "Active").length})`, val: "Active" },
+                { label: `Completed (${sites.filter(s => s.status === "Completed").length})`, val: "Completed" },
+                { label: `Terminated (${sites.filter(s => s.status === "Terminated").length})`, val: "Terminated" },
+              ].map(f => (
+                <button key={f.val} onClick={() => setSiteFilter(f.val)} className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border", siteFilter === f.val ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white text-slate-600 border-slate-200")}>{f.label}</button>
+              ))}
             </div>
             <div className="space-y-3">
               {filteredSites.map(s => (
@@ -463,15 +830,88 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
                     </div>
                     <div className="flex items-center gap-2"><StatusBadge status={s.status} /><ChevronRight className="w-4 h-4 text-slate-400" /></div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-[#0F172A] mb-1">
+                  <div className="flex items-center gap-2 text-sm text-[#0F172A] mb-2">
                     <UserCheck className="w-3.5 h-3.5 text-slate-400" /><span>PI: {s.pi}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
-                    <span>Trials: {s.trials.length}</span><span>·</span><span>Patients: {s.patients}</span>
+                  {/* Trials assigned */}
+                  {s.trials.length > 0 ? (
+                    <div className="mb-2">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Assigned Trials</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {s.trials.map(trialId => {
+                          const trial = trials.find(t => t.id === trialId)
+                          return (
+                            <button
+                              key={trialId}
+                              onClick={(e) => { e.stopPropagation(); if (trial) setSelectedTrial(trial) }}
+                              className="px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                            >
+                              {trialId}{trial ? ` · ${trial.phase}` : ""}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic mb-2">No trials assigned yet</p>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                    <span className="flex items-center gap-1">👤 {s.patients} Patients</span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">✓ {s.visitCompliance}% Compliance</span>
                   </div>
-                  <ProgressBar value={s.enrollmentPct} color="bg-[#0D9488]" />
-                  <p className="text-xs text-slate-500 mt-1">{s.enrolled}/{s.target} enrolled</p>
+                  {/* Site performance score */}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-slate-500">Performance</span>
+                    <span className="text-xs font-bold text-[#0D1B3E]">{sitePerformance(s)}%</span>
+                  </div>
+                  <ProgressBar value={sitePerformance(s)} color="bg-[#2563EB]" />
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PATIENTS TAB · Patient Recruitment Status ── */}
+        {activeTab === "patients" && (
+          <div className="px-4 pt-4">
+            <h2 className="font-bold text-lg text-[#0F172A] mb-1">Patient Recruitment Status</h2>
+            <p className="text-xs text-slate-500 mb-4">{totalPatients} patients enrolled across {trials.length} trials</p>
+
+            {/* All trials with recruitment funnel — each opens the Trial Summary */}
+            <div className="space-y-3">
+              {trials.map(t => (
+                <button key={t.id} onClick={() => setSelectedTrial(t)} className="w-full text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                  {/* Protocol ID + Status */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{t.id}</span>
+                    <div className="flex items-center gap-1.5"><StatusBadge status={t.status} /><ChevronRight className="w-4 h-4 text-slate-400" /></div>
+                  </div>
+                  {/* Phase · Disease · Drug */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Phase</p><p className="text-xs font-medium text-[#0F172A]">{t.phase}</p></div>
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Disease</p><p className="text-xs font-medium text-[#0F172A]">{t.indication}</p></div>
+                    <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Drug</p><p className="text-xs font-medium text-[#0F172A]">{t.drug}</p></div>
+                  </div>
+                  {/* Recruitment Status funnel */}
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Recruitment Status</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { label: "Screened", val: t.screened, color: "text-[#0F172A]" },
+                      { label: "Screen Fail", val: t.screenFail, color: "text-red-600" },
+                      { label: "Randomized", val: t.randomized, color: "text-[#0F172A]" },
+                      { label: "Withdrawn", val: t.withdrawn, color: "text-amber-600" },
+                      { label: "Dropout", val: t.dropouts, color: "text-orange-600" },
+                      { label: "Follow-up", val: t.followUp, color: "text-[#0D9488]" },
+                      { label: "Completed", val: t.completed, color: "text-[#0D9488]" },
+                    ].map(m => (
+                      <div key={m.label} className="bg-slate-50 rounded-lg p-1.5 text-center border border-slate-100">
+                        <p className={cn("text-sm font-bold leading-none", m.color)}>{m.val}</p>
+                        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </button>
               ))}
             </div>
           </div>
@@ -590,6 +1030,160 @@ export function SponsorDashboard({ onNavigate }: SponsorDashboardProps) {
           )
         })}
       </div>
+
+      {/* ── Add Site Screen (full-screen) ── */}
+      {showAddSite && (
+        <div className="absolute inset-0 z-50 bg-[#F8FAFC]">
+          <div className="h-full w-full flex flex-col">
+            {/* App bar */}
+            <div className="bg-[#0D1B3E] text-white px-4 py-3 flex items-center gap-3">
+              <button onClick={() => setShowAddSite(false)} className="p-1"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+              <span className="font-semibold flex-1">Add New Site</span>
+            </div>
+
+            {addSiteSuccess ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 px-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <p className="font-bold text-[#0F172A] text-lg">Site Added & Shared!</p>
+                <p className="text-sm text-slate-500">
+                  {newSite.siteName} added{addSiteTrial ? ` · ${addSiteTrial.id} shared with ${newSite.piName || "the PI"}` : ""}.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+
+                  {/* Entry mode: single vs bulk upload */}
+                  <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+                    {(["single", "upload"] as const).map(m => (
+                      <button key={m} onClick={() => setSiteEntryMode(m)}
+                        className={cn("flex-1 py-2.5 text-sm font-medium", siteEntryMode === m ? "bg-[#1A3872] text-white" : "bg-white text-slate-600")}>
+                        {m === "single" ? "Single Entry" : "Upload File"}
+                      </button>
+                    ))}
+                  </div>
+
+                  {siteEntryMode === "upload" ? (
+                    <>
+                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 bg-slate-50 text-center">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-200">
+                          <FileText className="w-6 h-6 text-slate-500" />
+                        </div>
+                        <p className="text-sm text-slate-600 mb-3">Upload multiple sites at once</p>
+                        <button className="px-4 py-2 border-2 border-[#1A3872] text-[#1A3872] rounded-lg font-medium text-sm">Browse Files</button>
+                        <p className="text-xs text-slate-400 mt-2">PDF, Word, Excel, CSV</p>
+                      </div>
+                      <p className="text-xs text-slate-400">Each row should include Protocol ID, Site Name, Address, PI Name, PI Email and Department.</p>
+                    </>
+                  ) : (
+                    <>
+                      {/* PANEL 1 — Trial Details (auto-populated from Protocol ID) */}
+                      <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 space-y-3">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Panel 1 · Trial Details</p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Protocol ID <span className="text-red-500">*</span></label>
+                          <input value={newSite.protocolId} onChange={e => setNewSite(p => ({ ...p, protocolId: e.target.value }))}
+                            placeholder="e.g. Protocol-001" list="add-site-protocols"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm bg-white focus:border-[#1A3872]" />
+                          <datalist id="add-site-protocols">
+                            {trials.map(t => <option key={t.id} value={t.id} />)}
+                          </datalist>
+                          {newSite.protocolId.trim() && !addSiteTrial && (
+                            <p className="text-xs text-amber-600 mt-1">No trial found for this Protocol ID.</p>
+                          )}
+                        </div>
+                        {addSiteTrial ? (
+                          <div className="grid grid-cols-2 gap-y-2.5 gap-x-3">
+                            <div className="col-span-2"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Study Title</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.name}</p></div>
+                            <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Phase</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.phase}</p></div>
+                            <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Disease</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.indication}</p></div>
+                            <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Drug</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.drug}</p></div>
+                            <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Duration</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.duration}</p></div>
+                            <div><p className="text-[10px] text-slate-400 uppercase tracking-wide">Sample Size</p><p className="text-sm font-medium text-[#0F172A]">{addSiteTrial.target}</p></div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400">Enter a Protocol ID to auto-populate trial details.</p>
+                        )}
+                      </div>
+
+                      {/* PANEL 2 — Site Details */}
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Panel 2 · Site Details</p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Site Name <span className="text-red-500">*</span></label>
+                          <input value={newSite.siteName} onChange={e => setNewSite(p => ({ ...p, siteName: e.target.value }))}
+                            placeholder="e.g. Apollo Mumbai"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Site Address</label>
+                          <input value={newSite.siteAddress} onChange={e => setNewSite(p => ({ ...p, siteAddress: e.target.value }))}
+                            placeholder="Building, Street, City, State"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">PI Name</label>
+                          <input value={newSite.piName} onChange={e => setNewSite(p => ({ ...p, piName: e.target.value }))}
+                            placeholder="Dr. First Last"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Department</label>
+                          <input value={newSite.department} onChange={e => setNewSite(p => ({ ...p, department: e.target.value }))}
+                            placeholder="e.g. Endocrinology"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">PI Email ID <span className="text-red-500">*</span></label>
+                          <input type="email" value={newSite.piEmail} onChange={e => setNewSite(p => ({ ...p, piEmail: e.target.value }))}
+                            placeholder="pi@hospital.com"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-[#1A3872]" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Access Type</label>
+                          <select value={newSite.accessType} onChange={e => setNewSite(p => ({ ...p, accessType: e.target.value }))}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm bg-white focus:border-[#1A3872]">
+                            <option>Patient Management</option>
+                            <option>View Only</option>
+                            <option>Full Access</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Submit */}
+                {siteEntryMode === "single" && (
+                  <div className="px-5 py-4 border-t border-slate-100">
+                    <button
+                      onClick={handleAddSite}
+                      disabled={!newSite.siteName || !newSite.piName || !newSite.piEmail}
+                      className={cn(
+                        "w-full py-3.5 rounded-xl font-semibold text-sm transition-all",
+                        newSite.siteName && newSite.piName && newSite.piEmail
+                          ? "bg-[#0D1B3E] text-white"
+                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                      )}
+                    >
+                      Save & Share with PI
+                    </button>
+                  </div>
+                )}
+                {siteEntryMode === "upload" && (
+                  <div className="px-5 py-4 border-t border-slate-100">
+                    <button className="w-full py-3.5 rounded-xl font-semibold text-sm bg-[#0D1B3E] text-white">
+                      Upload & Share with PIs
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

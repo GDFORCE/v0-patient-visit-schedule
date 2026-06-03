@@ -13,7 +13,7 @@ export function WelcomeScreen({ onSignUp, onSignIn, onForgotPassword }: WelcomeS
   return (
     <div className="h-full flex flex-col">
       {/* Gradient Background */}
-      <div className="flex-1 bg-gradient-to-b from-[#0D1B3E] via-[#1E3A6E] to-[#EFF6FF] flex flex-col items-center justify-center px-6">
+      <div className="flex-1 bg-gradient-to-b from-[#0D1B3E] via-[#1E3A6E] to-[#FFF7ED] flex flex-col items-center justify-center px-6">
         {/* Logo */}
         <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-lg">
           <Building2 className="w-12 h-12 text-[#1A3872]" />
@@ -21,10 +21,10 @@ export function WelcomeScreen({ onSignUp, onSignIn, onForgotPassword }: WelcomeS
         
         {/* Title */}
         <h1 className="text-3xl font-bold text-white text-center mb-2">
-          Patient Visit Schedule
+          My Trial Board
         </h1>
         <p className="text-base text-blue-300 text-center">
-          Simplifying Clinical Trial Visit Management
+          Visit Schedule Management
         </p>
       </div>
       

@@ -1,43 +1,12 @@
 "use client"
 
 import { AppBar } from "../app-bar"
-import { FileText, RefreshCw, X, CheckCircle, AlertCircle, HardDrive } from "lucide-react"
+import { FileText, RefreshCw, X } from "lucide-react"
 import { useState } from "react"
-import { cn } from "@/lib/utils"
 
 interface AddTrialScreenProps {
   onSave: () => void
   onBack: () => void
-}
-
-function CompressToggle() {
-  const [compress, setCompress] = useState(true)
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-slate-500" />
-          <div>
-            <p className="text-sm font-semibold text-[#0F172A]">Compress Protocol Document</p>
-            <p className="text-xs text-slate-500">Lossless compression — reduces storage cost</p>
-          </div>
-        </div>
-        <button onClick={() => setCompress(!compress)} className={cn("relative w-11 h-6 rounded-full transition-colors flex-shrink-0", compress ? "bg-[#0D9488]" : "bg-slate-300")}>
-          <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform", compress ? "translate-x-6" : "translate-x-1")} />
-        </button>
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2 text-xs text-green-600"><CheckCircle className="w-3.5 h-3.5" /><span>Reduces storage cost by ~60–80%</span></div>
-        <div className="flex items-center gap-2 text-xs text-green-600"><CheckCircle className="w-3.5 h-3.5" /><span>No impact on visit schedule or medication extraction (lossless)</span></div>
-        <div className="flex items-center gap-2 text-xs text-amber-500"><AlertCircle className="w-3.5 h-3.5" /><span>Decompression adds ~1–2s processing time on first access</span></div>
-      </div>
-      {compress && (
-        <div className="mt-3 bg-teal-50 rounded-lg px-3 py-2 text-xs text-teal-700 font-medium">
-          Compression enabled — document will be stored in compressed format
-        </div>
-      )}
-    </div>
-  )
 }
 
 export function AddTrialScreen({ onSave, onBack }: AddTrialScreenProps) {
@@ -65,9 +34,6 @@ export function AddTrialScreen({ onSave, onBack }: AddTrialScreenProps) {
           <p className="text-xs text-gray-400 mt-2">PDF, DOC, XLS, PNG, JPG</p>
         </div>
         
-        {/* Compression Toggle */}
-        <CompressToggle />
-
         {/* AI Processing State */}
         {processing && (
           <div className="bg-blue-50 rounded-2xl p-4 flex items-center gap-4">
@@ -83,13 +49,6 @@ export function AddTrialScreen({ onSave, onBack }: AddTrialScreenProps) {
           </div>
         )}
 
-        {/* Divider */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-gray-300" />
-          <span className="text-gray-500 text-sm">or fill manually</span>
-          <div className="flex-1 h-px bg-gray-300" />
-        </div>
-        
         {/* Form Fields */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Protocol ID *</label>
@@ -118,6 +77,21 @@ export function AddTrialScreen({ onSave, onBack }: AddTrialScreenProps) {
           />
         </div>
         
+        {/* Phase */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Phase *</label>
+          <select
+            defaultValue=""
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+          >
+            <option value="" disabled>Select phase</option>
+            <option>Phase I</option>
+            <option>Phase II</option>
+            <option>Phase III</option>
+            <option>Phase IV</option>
+          </select>
+        </div>
+
         {/* Disease/Indication Multi-select */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Disease/Indication *</label>
@@ -148,6 +122,49 @@ export function AddTrialScreen({ onSave, onBack }: AddTrialScreenProps) {
             placeholder="Enter drug name"
             className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
           />
+        </div>
+
+        {/* Duration of the Trial */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration of the Trial *</label>
+          <input
+            type="text"
+            placeholder="e.g. 18 months"
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+          />
+        </div>
+
+        {/* Sample Size + Total Visits */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample Size *</label>
+            <input
+              type="number"
+              placeholder="e.g. 100"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Total Visits *</label>
+            <input
+              type="number"
+              placeholder="e.g. 18"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Status of Trial — default Active */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Status of Trial</label>
+          <select
+            defaultValue="Active"
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#1A3872] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+          >
+            <option>Active</option>
+            <option>Completed</option>
+            <option>Terminated</option>
+          </select>
         </div>
       </div>
       

@@ -1,0 +1,984 @@
+# V0.DEV PROMPT — Role-Specific Registration Forms
+## Registration Screen — Different Fields Per Entity Type
+
+---
+
+## CONTEXT
+
+The Registration screen appears **after** the user selects their entity type on the "Who are you?" screen.
+
+The selected entity type is passed as a prop/state to the Registration screen.
+Based on the entity type, the form must **dynamically show different fields**.
+
+There is NO single universal registration form.
+There are **5 distinct form variants** — one per entity type.
+
+---
+
+## FLOW
+
+```
+Welcome Screen
+      ↓
+  [Sign Up]
+      ↓
+"Who are you?" Screen
+  [Sponsor] [CRO] [SMO] [Site/Hospital] [Patient]
+      ↓
+Registration Screen
+(form fields change based on selection above)
+      ↓
+OTP Verification
+      ↓
+Password Creation
+      ↓
+Account Created ✓
+```
+
+---
+
+## SIGN IN — NO ENTITY SELECTION NEEDED
+
+- Sign In screen is a **single universal screen** for ALL roles
+- Just Email/Phone + Password
+- System detects the role from the account and routes to the correct dashboard automatically
+- Routes:
+  - Sponsor / CRO → Sponsor Dashboard
+  - SMO / Site / PI → Investigator Dashboard
+  - Patient → Patient Dashboard
+  - Platform Admin → Admin Dashboard
+
+---
+
+## REGISTRATION FIELD MATRIX
+
+| Field | Sponsor | CRO | SMO | Site/Hospital | Patient |
+|-------|:-------:|:---:|:---:|:-------------:|:-------:|
+| Full Name | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Designation | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Email ID | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Phone Number | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Organization Name | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Organization Address | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Role (Admin/User toggle) | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Add Sites (name + address) | ❌ | ❌ | ✅ ONLY | ❌ | ❌ |
+| Date of Birth | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Gender | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Preferred Language | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Consent Checkboxes (2) | ❌ | ❌ | ❌ | ❌ | ✅ ONLY |
+| Terms checkbox (1) | ✅ | ✅ | ✅ | ✅ | ❌ (uses consent checkboxes instead) |
+
+---
+
+## FORM VARIANT 1 — SPONSOR
+
+**Header:** back arrow + "Registration" + blue chip badge "Sponsor"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name* (text input)
+2. Designation (text input, optional)
+3. Email ID* (email input) — inline error: "Email already exists" in red if duplicate
+4. Phone Number* (+91 prefix dropdown + number input)
+5. Organization Name* (text input with autocomplete dropdown suggestions below as user types)
+6. Organization Address (textarea, 3 rows, optional)
+7. Role* — two pill toggle buttons side by side:
+   - **[Admin]** | **[User]** — active pill = `#0D1B3E` bg + white text, inactive = white bg + gray border
+
+**Bottom section:**
+- Single checkbox row:
+  `☐ I agree to the` **[Terms & Conditions]** `and` **[Privacy Policy]**
+  - Tapping "Terms & Conditions" → opens Terms bottom sheet (see separate prompt)
+  - Tapping "Privacy Policy" → opens Privacy Policy bottom sheet
+  - Must be checked to enable Submit button
+
+- **[Submit]** button — dark navy `#0D1B3E`, full width, 48px height, disabled (gray) until all required fields filled + checkbox ticked
+
+---
+
+## FORM VARIANT 2 — CRO
+
+**Header:** back arrow + "Registration" + blue chip badge "CRO"
+**Progress bar:** 40%
+
+**Fields (in order):** ← IDENTICAL to Sponsor
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name*
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+> CRO form is identical to Sponsor — only the entity chip badge label differs.
+
+---
+
+## FORM VARIANT 3 — SMO ⭐ (Has unique "Add Sites" section)
+
+**Header:** back arrow + "Registration" + blue chip badge "SMO"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name* (SMO organization name)
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**UNIQUE SECTION — "Sites Managed" (SMO only):**
+
+Divider line with label: `─── Sites Managed ───`
+
+Instruction text (gray, 13px): "Add the sites/hospitals that your SMO manages"
+
+**Site Entry Card (white, border, rounded-xl):**
+```
+┌─────────────────────────────────┐
+│  Site 1                    [🗑] │  ← trash icon to remove
+│                                 │
+│  Site Name*                     │
+│  [________________________]     │
+│                                 │
+│  Site Address                   │
+│  [________________________]     │
+│  [________________________]     │
+│                                 │
+└─────────────────────────────────┘
+```
+
+- First site card shown by default (cannot be removed)
+- **[+ Add Another Site]** button (outlined, blue, full width) — adds another site card below
+- Each additional site card has a trash/delete icon (top-right) to remove it
+- Site cards are numbered: Site 1, Site 2, Site 3...
+- Maximum: no hard limit shown in UI, but cards stack vertically with 12px gap
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+---
+
+## FORM VARIANT 4 — SITE / HOSPITAL
+
+**Header:** back arrow + "Registration" + blue chip badge "Site/Hospital"
+**Progress bar:** 40%
+
+**Fields (in order):** ← IDENTICAL to Sponsor
+1. Full Name*
+2. Designation
+3. Email ID*
+4. Phone Number*
+5. Organization Name* (hospital/site name)
+6. Organization Address
+7. Role* — **[Admin]** | **[User]** toggle
+
+**Bottom section:** Same single Terms checkbox + **[Submit]**
+
+> Site/Hospital form is identical to Sponsor — only the entity chip badge label differs.
+
+---
+
+## FORM VARIANT 5 — PATIENT ⭐⭐ (Most different)
+
+**Header:** back arrow + "Registration" + blue chip badge "Patient"
+**Progress bar:** 40%
+
+**Fields (in order):**
+1. Full Name* (text input)
+2. Date of Birth* (date picker — show calendar icon on right, opens date picker on tap)
+   - Format displayed: DD / MM / YYYY
+3. Gender* (dropdown select):
+   - Options: Male | Female | Other | Prefer not to say
+4. Phone Number* (+91 prefix dropdown + number input)
+5. Email ID (email input, optional for patient)
+
+**Preferred Language* (dropdown select):**
+- Options: English | Hindi | Tamil | Telugu | Kannada | Malayalam | Bengali | Marathi
+
+**NO fields for:** Designation, Organization Name, Organization Address, Role toggle
+
+**Bottom section — CONSENT CHECKBOXES (replaces single Terms checkbox):**
+
+Two separate required checkboxes (both must be checked to enable Submit):
+
+```
+☐  I consent to use of my contact details to receive in-app 
+   reminders and notifications related to my clinical trial 
+   participation through this application.
+
+☐  I have read and accepted the [Terms & Conditions] and 
+   [Privacy Policy].
+```
+
+- Each checkbox is independently tappable
+- Both must be ticked to enable the Submit button
+- "Terms & Conditions" and "Privacy Policy" are tappable links → open bottom sheet modals
+- Checkbox label text wraps to multiple lines (do not truncate)
+
+**[Submit]** button — disabled until all required fields filled + BOTH checkboxes ticked
+
+---
+
+## SHARED UI SPECS (All 5 Variants)
+
+### Entity Chip Badge
+- Shown below the "Registration" title in the header
+- Pill shape, blue-50 bg (`#EFF6FF`), blue-700 text (`#1D4ED8`), blue border
+- Shows selected entity name: "Sponsor" / "CRO" / "SMO" / "Site/Hospital" / "Patient"
+
+### Form Field Specs
+- Label: 13px, `#475569`, above the input
+- Input: white bg, `#E2E8F0` border, 12px radius, 48px height, 14px text `#0F172A`
+- Focus state: `#2563EB` border (2px)
+- Error state: `#DC2626` border + red error message below (13px)
+- Required fields: asterisk (*) after label
+
+### Phone Number Field
+- Left section (prefix): gray-100 bg, `+91` text, border-right, not editable
+- Right section: number input, no left border
+
+### Organization Name Autocomplete
+- As user types, show a white dropdown card below the input
+- Dropdown items: org name + org type badge
+- Tap item to fill the field and close dropdown
+- Show "Not found? Continue typing your org name" at bottom of dropdown
+
+### Role Toggle (Sponsor/CRO/SMO/Site only)
+- Two buttons side by side, equal width, rounded-lg
+- Active: `#0D1B3E` bg, white text
+- Inactive: white bg, `#E2E8F0` border, `#64748B` text
+- Only one can be active at a time
+
+### Checkbox Style
+- 20×20px square, rounded-sm
+- Unchecked: white bg, `#CBD5E1` border
+- Checked: `#0D1B3E` bg, white checkmark icon
+- Tap anywhere on the label row to toggle
+
+### Submit Button States
+| State | Background | Text | Condition |
+|-------|-----------|------|-----------|
+| Disabled | `#CBD5E1` | `#94A3B8` | Required fields empty or checkbox unchecked |
+| Enabled | `#0D1B3E` | White | All required fields filled + checkbox(es) ticked |
+| Loading | `#0D1B3E` + spinner | "Submitting..." | While API call in progress |
+
+---
+
+## IMPLEMENTATION NOTES FOR V0
+
+```jsx
+// Pseudo-code structure
+const RegistrationScreen = ({ entityType }) => {
+  // entityType = "sponsor" | "cro" | "smo" | "site" | "patient"
+  
+  const isSMO = entityType === "smo";
+  const isPatient = entityType === "patient";
+  const isOrgUser = !isPatient; // sponsor, cro, smo, site
+
+  return (
+    <>
+      {/* Common to all */}
+      <FullNameField />
+      
+      {/* Org users only */}
+      {isOrgUser && <DesignationField />}
+      
+      <EmailField />
+      <PhoneField />
+      
+      {/* Org users only */}
+      {isOrgUser && <OrgNameField />}
+      {isOrgUser && <OrgAddressField />}
+      {isOrgUser && <RoleToggle />}
+      
+      {/* SMO only */}
+      {isSMO && <AddSitesSection />}
+      
+      {/* Patient only */}
+      {isPatient && <DateOfBirthField />}
+      {isPatient && <GenderDropdown />}
+      {isPatient && <LanguageDropdown />}
+      
+      {/* Consent / Terms */}
+      {isPatient ? <PatientConsentCheckboxes /> : <SingleTermsCheckbox />}
+      
+      <SubmitButton />
+    </>
+  );
+};
+```
+
+---
+
+## VALIDATION RULES
+
+| Field | Rule |
+|-------|------|
+| Full Name | Required, min 2 chars |
+| Email | Required for all, valid email format, duplicate check |
+| Phone | Required, 10 digits (after +91 prefix) |
+| Organization Name | Required for org users |
+| Role | Required for org users, must select one |
+| Site Name (SMO) | Required for each site card added |
+| Date of Birth (Patient) | Required, must be valid date, user must be 18+ |
+| Gender (Patient) | Required, must select one option |
+| Language (Patient) | Required, must select one option |
+| Terms checkbox | Must be checked before Submit enabled |
+| Both consent checkboxes (Patient) | BOTH must be checked before Submit enabled |
+
+---
+
+## ERROR MESSAGES
+
+| Scenario | Message | Location |
+|----------|---------|----------|
+| Email already registered | "This email is already registered. Sign in instead?" | Below email field, red |
+| Phone already registered | "This phone number is already registered." | Below phone field, red |
+| Invalid email format | "Please enter a valid email address" | Below email field, red |
+| Phone not 10 digits | "Please enter a valid 10-digit mobile number" | Below phone field, red |
+| Under 18 (Patient DOB) | "You must be 18 or older to register" | Below DOB field, red |
+| Submit with empty required fields | Highlight all empty required fields with red border simultaneously | Inline |
+
+---
+
+*End of Role-Specific Registration Forms Prompt*
+*5 form variants: Sponsor / CRO / SMO (+ Add Sites) / Site/Hospital / Patient (+ Consent)*
+
+
+
+
+# V0.DEV PROMPT — Patient Dashboard Icon Navigation
+## Bell Icon → Notifications Screen | Profile Avatar → Profile Screen
+
+---
+
+## CONTEXT
+
+On the **Patient Dashboard ("My Trial Journey")**, the top app bar has:
+- **Left:** "My Trial Journey" title
+- **Right:** 🔔 Bell icon (with red badge showing count) + 🟣 Avatar circle "PK"
+
+Both icons navigate to **completely separate full screens** (not modals, not overlays, not bottom sheets).
+
+```
+Patient Dashboard
+├── 🔔 Bell icon  ──────────→  Notifications Screen (full screen)
+└── 🟣 PK Avatar  ──────────→  Profile & Settings Screen (full screen)
+```
+
+Each screen has its own back arrow that returns to the Patient Dashboard.
+
+---
+
+# SCREEN A — NOTIFICATIONS SCREEN
+## (Triggered by tapping the Bell icon 🔔)
+
+---
+
+## NAVIGATION
+- **Entry:** Tap bell icon on any screen's app bar
+- **Exit:** Tap back arrow → returns to the screen the user came from
+- **URL/Route:** `/notifications`
+
+---
+
+## APP BAR
+- Back arrow (ChevronLeft, 24px) — left
+- Title: **"Notifications"** (Sora, 17px, `#0D1B3E`, bold) — center
+- **"Mark All Read"** text button (14px, `#2563EB`) — right
+  - Tap → marks all visible notifications as read (all blue dots disappear, all titles become normal weight)
+
+---
+
+## FILTER CHIPS (horizontal scrollable row, below app bar)
+
+```
+[All 12] [Visits 5] [Medication 4] [Trials 2] [System 1]
+```
+
+- Default active: **All**
+- Active chip: `#EFF6FF` bg, `#1D4ED8` border + text, bold
+- Inactive chip: white bg, `#E2E8F0` border, `#64748B` text
+- Chips scroll horizontally if they overflow (no wrap)
+- Count badge inside each chip updates when notifications are read
+
+---
+
+## NOTIFICATION LIST (scrollable, grouped by date)
+
+### Date Group Headers
+```
+TODAY
+YESTERDAY  
+EARLIER THIS WEEK
+OLDER
+```
+- Header text: 11px, `#94A3B8`, uppercase, letter-spacing 0.8px
+- `#F8FAFC` section header bg (full width)
+- 8px padding top/bottom
+
+---
+
+### NOTIFICATION CARD ANATOMY
+
+```
+┌─────────────────────────────────────────────┐
+│ 🔵  [ICON]  Title text bold (unread)    12m │
+│     [circ]  Preview message text here...    │
+│             truncated to 2 lines            │
+└─────────────────────────────────────────────┘
+```
+
+**Left edge:** Blue dot `#2563EB` (6px circle) — visible when UNREAD, hidden when read
+**Icon circle:** 40px circle with icon centered (20px icon)
+**Title:** 14px, `#0F172A`, bold when unread / normal weight when read
+**Preview:** 13px, `#64748B`, max 2 lines, ellipsis overflow
+**Timestamp:** 12px, `#94A3B8`, top-right corner
+
+**Tap notification card:**
+- Marks it as read (blue dot disappears, title weight normalizes)
+- Opens **Notification Detail Screen** (see Screen A.1 below)
+
+**Long press notification card:**
+- Card gets a blue-50 background
+- Checkbox appears on left (replaces blue dot)
+- Other cards get checkboxes too (bulk select mode activated)
+- Footer bulk action bar slides up from bottom
+
+---
+
+### NOTIFICATION TYPES & ICONS
+
+| Type | Icon | Icon Circle Color | Example Title | Example Body |
+|------|------|-------------------|---------------|--------------|
+| **Visit Reminder** | Bell | `#DBEAFE` (blue-100) | "Visit 7 Tomorrow" | "Your Follow-Up Visit 7 is scheduled for 24 May 2025 at 10:00 AM at AIIMS Delhi." |
+| **Visit Overdue** | AlertTriangle | `#FEE2E2` (red-100) | "Missed Visit Alert" | "Visit 5 was due 3 days ago. Please contact your research team immediately." |
+| **Visit Completed** | CheckCircle | `#D1FAE5` (green-100) | "Visit 6 Confirmed" | "Your Visit 6 has been marked complete. Next visit: Visit 7 on 24 May 2025." |
+| **Medication Reminder** | Pill | `#F3E8FF` (purple-100) | "Take Metformin 500mg" | "It's 8:00 AM — time to take your morning dose of Metformin 500mg." |
+| **Medication Taken** | CheckCircle | `#D1FAE5` (green-100) | "Medication Logged" | "Metformin 500mg marked as taken at 8:03 AM." |
+| **Trial Update** | Bell | `#FEF3C7` (amber-100) | "Trial Update" | "Protocol-001 schedule has been updated by Dr. Sharma. Please review your upcoming visits." |
+| **Message from PI** | MessageCircle | `#E0F2FE` (sky-100) | "Message from Dr. Sharma" | "Please remember to fast for 8 hours before your Visit 7 blood draw." |
+| **System** | Settings | `#F1F5F9` (slate-100) | "App Updated" | "Patient Visit Schedule has been updated to version 2.1." |
+
+---
+
+### SAMPLE NOTIFICATION LIST (mock data, show all these)
+
+**TODAY**
+
+1. 🔵 [Bell/blue] **"Visit 7 Tomorrow"** · 2h ago
+   "Your Follow-Up Visit 7 is scheduled for 24 May 2025 at 10:00 AM at AIIMS Delhi. Please arrive 15 minutes early."
+
+2. 🔵 [Pill/purple] **"Take Metformin 500mg"** · 8:00 AM
+   "It's 8:00 AM — time to take your morning dose of Metformin 500mg."
+
+3. ⚪ [CheckCircle/green] "Medication Logged" · 8:03 AM *(read)*
+   "Metformin 500mg marked as taken at 8:03 AM. Good job keeping up with your schedule!"
+
+**YESTERDAY**
+
+4. ⚪ [CheckCircle/green] "Visit 6 Confirmed" · Yesterday, 3:30 PM *(read)*
+   "Your Visit 6 has been marked complete by Dr. Sharma. Next visit: Visit 7 on 24 May."
+
+5. 🔵 [MessageCircle/sky] **"Message from Dr. Sharma"** · Yesterday, 11:00 AM
+   "Please remember to fast for 8 hours before your Visit 7 blood draw. Water is allowed."
+
+6. ⚪ [Pill/purple] "Take Aspirin 75mg" · Yesterday, 2:00 PM *(read)*
+   "It's 2:00 PM — time to take your afternoon dose of Aspirin 75mg."
+
+**EARLIER THIS WEEK**
+
+7. ⚪ [Bell/amber] "Trial Update" · 22 May *(read)*
+   "Protocol-001 visit schedule has been updated. Visit 7 window has been extended by 2 days."
+
+8. 🔵 [AlertTriangle/red] **"Missed Medication"** · 21 May
+   "You did not log your evening dose of Metformin 500mg (8:00 PM). Please contact your team if you need help."
+
+---
+
+## BULK ACTION MODE (long-press to activate)
+
+When in bulk select mode:
+- App bar changes: **"X selected"** (left) + **"Cancel"** (right, blue text)
+- All cards show checkboxes
+- Bottom action bar slides up (64px, white, shadow):
+
+```
+┌─────────────────────────────────────────┐
+│ [Select All]   [🗑 Delete]  [🔕 Stop]   │
+└─────────────────────────────────────────┘
+```
+
+- **Select All:** selects all visible notifications
+- **Delete (red):** permanently deletes selected notifications (confirm dialog)
+- **Stop (amber):** stops future notifications of the same type as selected
+
+**Delete Confirmation Dialog:**
+- "Delete X notifications?"
+- "This cannot be undone."
+- **[Cancel]** outlined | **[Delete]** red filled
+
+---
+
+## EMPTY STATE (when filter shows no notifications)
+
+```
+        🔔
+   (gray bell icon, 48px)
+
+  No notifications here
+  You're all caught up!
+
+  [Go to Dashboard]  ← blue outlined button
+```
+
+---
+
+# SCREEN A.1 — NOTIFICATION DETAIL SCREEN
+## (Triggered by tapping a notification card)
+
+---
+
+## APP BAR
+- Back arrow → returns to Notifications list
+- Title: notification type (e.g., "Visit Reminder") — center
+- No right actions
+
+## CONTENT (full screen, scrollable)
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│   [ICON CIRCLE — 64px, centered]        │
+│                                         │
+│   Visit 7 Tomorrow                      │  ← title, Sora 20px bold
+│   25 May 2025 · 10:32 AM               │  ← timestamp, gray 13px
+│                                         │
+│ ─────────────────────────────────────── │
+│                                         │
+│  Your Follow-Up Visit 7 is scheduled   │  ← full message body
+│  for 24 May 2025 at 10:00 AM at        │  DM Sans 15px, #374151
+│  AIIMS Delhi. Please arrive 15         │  line-height 1.7
+│  minutes early and bring your          │
+│  patient card.                          │
+│                                         │
+│ ─────────────────────────────────────── │
+│                                         │
+│  Related Details                        │  ← context section header
+│  ┌───────────────────────────────────┐  │
+│  │ 📋 Protocol-001                   │  │
+│  │ 🏥 Visit 7 · Follow-Up Visit      │  │
+│  │ 📍 AIIMS Delhi, OPD Block 3       │  │
+│  │ 📅 24 May 2025, 10:00 AM          │  │
+│  │ ⏰ Window: 22–26 May 2025         │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │      View Visit Details  →      │    │  ← primary action button
+│  └─────────────────────────────────┘    │
+│                                         │
+│  [🗑 Delete Notification]               │  ← text link, red, centered
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Primary action button** — varies by notification type:
+
+| Notification Type | Button Text | Action |
+|------------------|-------------|--------|
+| Visit Reminder | "View Visit Details →" | → Visit Detail screen |
+| Visit Overdue | "Update Visit Status →" | → Visit Detail screen |
+| Medication Reminder | "Log Medication →" | → Medication Reminders screen |
+| Trial Update | "View Trial →" | → About Trial screen |
+| Message from PI | "Open Chat →" | → Chat screen |
+| System | (no action button) | — |
+
+---
+
+# SCREEN B — PROFILE & SETTINGS SCREEN
+## (Triggered by tapping the "PK" avatar circle 🟣)
+
+---
+
+## NAVIGATION
+- **Entry:** Tap avatar (PK circle) on Patient Dashboard app bar
+- **Exit:** Tap back arrow → returns to Patient Dashboard
+- **Route:** `/profile`
+
+---
+
+## APP BAR
+- Back arrow (ChevronLeft) — left
+- Title: **"Profile & Settings"** — center
+- No right action icons
+
+---
+
+## SCREEN LAYOUT (full screen, scrollable)
+
+### SECTION 1 — PROFILE HEADER (top of screen, non-scrollable visual anchor)
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│           ┌─────────┐                   │
+│           │   👤    │ ← 80px avatar     │
+│           │   PK    │   circle          │
+│           └────📷───┘ ← camera icon     │
+│               (bottom-right of circle)  │
+│                                         │
+│           Priya Kapoor                  │  ← name, Sora 18px bold
+│         priya.k@gmail.com               │  ← email, gray 13px
+│       +91 98765 43210                   │  ← phone, gray 13px
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+- Avatar circle: 80px, `#7C3AED` (purple) bg, "PK" white text (Sora, 24px)
+- Camera icon badge: 28px white circle, `#2563EB` camera icon inside, bottom-right of avatar
+  - Tap camera → opens image picker (photo library / camera options in an action sheet)
+- Name: `#0F172A`, 18px, Sora bold
+- Email + phone: `#64748B`, 13px, DM Sans
+
+---
+
+### SECTION 2 — MENU LIST (white cards, full width, separated by thin dividers)
+
+Each menu item is a full-width tappable row (52px height):
+```
+[Icon]  Menu Item Label              [ChevronRight →]
+```
+
+**Menu Items:**
+
+```
+┌─────────────────────────────────────────┐
+│ 👤  Edit Profile                     >  │  → Screen B.1
+├─────────────────────────────────────────┤
+│ 🔒  Change Password                  >  │  → Screen B.2
+├─────────────────────────────────────────┤
+│ 🌐  Preferred Language               >  │  → Language picker
+├─────────────────────────────────────────┤
+│ 🔔  Notification Preferences         >  │  → Screen B.3
+├─────────────────────────────────────────┤
+│ 📄  Terms & Conditions               >  │  → Terms viewer
+├─────────────────────────────────────────┤
+│ 🔏  Privacy Policy                   >  │  → Privacy viewer
+├─────────────────────────────────────────┤
+│ ❓  Help & Support                   >  │  → Screen B.4
+├─────────────────────────────────────────┤
+│ 🐛  Report an Issue                  >  │  → Bug report form
+├─────────────────────────────────────────┤
+│ 🚪  Logout                              │  → Logout confirmation dialog
+└─────────────────────────────────────────┘
+```
+
+- Icon: 20px, `#64748B`, inside 36px `#F8FAFC` circle
+- Label: 15px, `#0F172A`, DM Sans
+- Chevron: `#CBD5E1`, 16px (not shown on Logout)
+- **Logout row:** label is `#DC2626` (red), no chevron, no icon circle background
+
+### App Version Footer
+```
+Patient Visit Schedule  v2.1.0
+© 2025 MTB Health Technologies
+```
+- Centered, 12px, `#94A3B8`, 24px padding top
+
+---
+
+# SCREEN B.1 — EDIT PROFILE
+## (Navigated from Profile menu → Edit Profile)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Edit Profile"**
+- **"Save"** text button (right, `#2563EB`, bold) — disabled until a field is changed
+
+## CONTENT
+
+```
+[Avatar 80px + camera icon]
+     ↕ centered top
+
+Full Name*
+[Priya Kapoor                    ]
+
+Date of Birth*
+[15 / 08 / 1992          📅]
+
+Gender*
+[Female                      ▼ ]
+
+Phone Number
+[+91] [98765 43210              ]
+⚠ "Changing this will notify your research team and require OTP verification"
+
+Email ID
+[priya.k@gmail.com              ]
+⚠ "Changing this will notify your research team and require OTP verification"
+
+Preferred Language
+[English                     ▼ ]
+```
+
+- Warning notices under Phone and Email: amber-50 bg, amber border, AlertTriangle icon, 12px text
+- All fields pre-filled with current data
+- Editable fields: Full Name, DOB, Gender, Language (immediate save)
+- Phone + Email: tapping them shows the warning notice prominently → requires OTP step to confirm change
+
+**Phone/Email Change Flow (when user edits these fields):**
+1. User changes phone number → taps Save
+2. Modal appears: "Verify new phone number"
+   - "We'll send an OTP to +91 XXXXXXXXXX"
+   - **[Send OTP]** → goes to OTP screen → on success, updates phone
+3. Research team gets an in-app notification of the change
+
+**[Save Changes]** full-width navy button at bottom
+
+---
+
+# SCREEN B.2 — CHANGE PASSWORD
+## (Navigated from Profile menu → Change Password)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Change Password"**
+
+## CONTENT
+
+```
+Current Password*
+[••••••••              👁]
+
+New Password*
+[                      👁]
+
+Password Strength:
+[■][■][□][□][□]  Weak
+
+Rules checklist:
+✗  Minimum 8 characters
+✗  Uppercase letter (A-Z)
+✗  Lowercase letter (a-z)
+✗  Numeric character (0-9)
+✗  Special character (!@#$%...)
+
+Confirm New Password*
+[                      👁]
+✗ Passwords do not match
+```
+
+- Strength bar: 5 segments
+  - 1-2 filled = red = "Weak"
+  - 3 filled = amber = "Medium"
+  - 4-5 filled = green = "Strong"
+- Rules: red X icon when not met, green check icon when met
+- Match indicator below confirm field: red "✗ Passwords do not match" / green "✓ Passwords match"
+- Eye icon toggles visibility on all 3 fields independently
+
+**[Update Password]** full-width navy button
+- Disabled: until current password filled + all 5 rules met + passwords match
+- Success: green toast "Password updated successfully" + auto-navigate back to Profile
+
+---
+
+# SCREEN B.3 — NOTIFICATION PREFERENCES
+## (Navigated from Profile menu → Notification Preferences)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Notification Preferences"**
+
+## CONTENT
+
+```
+Visit Reminders
+─────────────────────────────────────
+Push Notifications          [toggle ON ]
+SMS Reminders               [toggle ON ]
+Email Reminders             [toggle OFF]
+
+Remind me before visit:
+  ○ 1 day before
+  ● 2 days before   ← selected
+  ○ 3 days before
+
+──────────────────────────────────────
+
+Medication Reminders
+─────────────────────────────────────
+Push Notifications          [toggle ON ]
+SMS Reminders               [toggle ON ]
+
+──────────────────────────────────────
+
+General Notifications
+─────────────────────────────────────
+Trial Updates               [toggle ON ]
+Messages from PI            [toggle ON ]
+System Notifications        [toggle OFF]
+```
+
+- Toggle switches: ON = `#0D9488` (teal), OFF = `#CBD5E1`
+- Radio buttons for visit reminder timing
+- **[Save Preferences]** navy button at bottom
+- Success: toast "Preferences saved"
+
+---
+
+# SCREEN B.4 — HELP & SUPPORT
+## (Navigated from Profile menu → Help & Support)
+
+## APP BAR
+- Back arrow → Profile & Settings
+- Title: **"Help & Support"**
+
+## CONTENT
+
+### Quick Action Cards (3 cards, full width, white, shadow)
+
+```
+┌─────────────────────────────────────────┐
+│ ❓  Frequently Asked Questions        > │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 💬  Contact Support                   > │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 🐛  Report an Issue                   > │
+└─────────────────────────────────────────┘
+```
+
+### Contact Information Card
+```
+┌─────────────────────────────────────────┐
+│  Contact Us                             │
+│                                         │
+│  📧  support@patientvisitschedule.com   │
+│  📞  1800-XXX-XXXX (Toll Free)          │
+│  🕐  Mon – Fri, 9:00 AM – 6:00 PM      │
+└─────────────────────────────────────────┘
+```
+
+**FAQ sub-screen (tap FAQ card):**
+- Back arrow + "FAQ"
+- Accordion list of Q&A items:
+  - "How do I view my upcoming visit?" → expands answer
+  - "What if I miss a visit?" → expands
+  - "How do I contact my research team?" → expands
+  - "Can I change my phone number?" → expands
+  - "How are medication reminders set?" → expands
+- Each item: ChevronDown rotates to ChevronUp when expanded
+
+**Contact Support sub-screen (tap Contact Support):**
+- Back arrow + "Contact Support"
+- Form:
+  - Issue Category (dropdown): Login Issue / Notification Problem / App Bug / Visit Query / Other
+  - Subject (text input)
+  - Description (textarea, 5 rows)
+  - Attach Screenshot (optional, file picker button)
+- **[Submit Ticket]** navy button
+- Success: "Ticket submitted! We'll respond within 24 hours." + ticket ID shown
+
+---
+
+## LOGOUT FLOW
+
+**Tapping "Logout" on Profile menu:**
+
+1. Confirmation dialog appears (modal overlay):
+
+```
+┌───────────────────────────────┐
+│                               │
+│        Log Out?               │
+│                               │
+│  Are you sure you want to     │
+│  log out of Patient Visit     │
+│  Schedule?                    │
+│                               │
+│  [    Cancel    ] [  Log Out ]│
+│    (outlined)      (red fill) │
+│                               │
+└───────────────────────────────┘
+```
+
+2. Tap **[Log Out]** →
+   - Show brief loading spinner
+   - Clear session
+   - Navigate to **Welcome Screen** (Screen 1.1)
+   - Show green toast briefly on Welcome screen: "Logged out successfully"
+
+3. Tap **[Cancel]** → dismiss dialog, stay on Profile screen
+
+---
+
+## LANGUAGE PICKER (from Preferred Language menu item)
+
+Bottom sheet (50% height):
+- Title: "Preferred Language"
+- List of languages with radio button:
+  - 🔵 English (selected)
+  - ○ Hindi — हिंदी
+  - ○ Tamil — தமிழ்
+  - ○ Telugu — తెలుగు
+  - ○ Kannada — ಕನ್ನಡ
+  - ○ Malayalam — മലയാളം
+  - ○ Bengali — বাংলা
+  - ○ Marathi — मराठी
+- **[Apply]** navy button at bottom
+- On apply: show toast "Language updated to Hindi" + app UI language switches
+
+---
+
+## TERMS & CONDITIONS / PRIVACY POLICY VIEWER
+(from Profile menu → Terms & Conditions or Privacy Policy)
+
+Full screen viewer (NOT bottom sheet here — since user is intentionally opening to read, not during registration):
+
+- App bar: back arrow + "Terms & Conditions" (or "Privacy Policy")
+- Version info: "Version 2.1 · Effective 1 Jan 2025" (gray, 13px)
+- Full scrollable document text (same content as registration bottom sheet)
+- "You accepted this on 15 March 2025" (green check + date, bottom of content)
+- NO action button needed (already accepted during registration)
+
+---
+
+## SUMMARY — NAVIGATION MAP
+
+```
+Patient Dashboard
+│
+├── 🔔 Bell Icon
+│       └── Notifications Screen
+│               ├── [filter chips] All/Visits/Medication/Trials/System
+│               ├── [notification card tap] → Notification Detail Screen
+│               │       └── [action button] → Visit Detail / Medication / Chat / About Trial
+│               └── [long press] → Bulk select mode → Delete / Stop
+│
+└── 🟣 PK Avatar
+        └── Profile & Settings Screen
+                ├── Edit Profile → (phone/email change requires OTP)
+                ├── Change Password
+                ├── Preferred Language → Language bottom sheet
+                ├── Notification Preferences
+                ├── Terms & Conditions → Full screen viewer
+                ├── Privacy Policy → Full screen viewer
+                ├── Help & Support
+                │       ├── FAQ → Accordion list
+                │       ├── Contact Support → Ticket form
+                │       └── Report Issue → Bug report form
+                └── Logout → Confirmation dialog → Welcome Screen
+```
+
+---
+
+*End of Patient Dashboard Icon Navigation Prompt*
+*Bell Icon → Full Notifications Screen with detail view*
+*Avatar → Full Profile & Settings with 6 sub-screens*

@@ -58,7 +58,7 @@ export function EntityTypeScreen({ selectedEntity, onSelect, onContinue, onBack 
             )
           })}
         </div>
-        
+
         {/* Patient Card */}
         <button
           onClick={() => onSelect("patient")}

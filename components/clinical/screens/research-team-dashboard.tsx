@@ -61,6 +61,12 @@ const patients = [
   { id: "SUBJ-005", name: "Deepa Nair", age: 44, nextVisit: "—", status: "withdrawn" },
 ]
 
+const crcTrials = [
+  { id: "Protocol-001", title: "Diabetes Phase II", phase: "Phase II", disease: "Type 2 Diabetes", drug: "Metformin XR", pi: "Dr. Sharma", department: "Endocrinology", status: "Active" },
+  { id: "Protocol-005", title: "Asthma Maintenance Study", phase: "Phase III", disease: "Asthma", drug: "Budesonide", pi: "Dr. Sharma", department: "Pulmonology", status: "Active" },
+  { id: "Protocol-008", title: "Rheumatoid Arthritis Trial", phase: "Phase II", disease: "Rheumatoid Arthritis", drug: "Methotrexate", pi: "Dr. Rao", department: "Rheumatology", status: "Completed" },
+]
+
 const statusStyle: Record<string, { label: string; bg: string; text: string }> = {
   "on-track": { label: "On Track", bg: "bg-emerald-100", text: "text-emerald-700" },
   overdue:    { label: "Overdue",  bg: "bg-red-100",     text: "text-red-700" },
@@ -84,6 +90,42 @@ export function ResearchTeamDashboard({ onNavigate }: ResearchTeamDashboardProps
   const [activeTab, setActiveTab] = useState<CrcTab>("dashboard")
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("today")
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [selectedTrial, setSelectedTrial] = useState<typeof crcTrials[0] | null>(null)
+  const [showAllTrials, setShowAllTrials] = useState(false)
+
+  const trialStatusColor: Record<string, string> = {
+    Active: "bg-emerald-100 text-emerald-700",
+    Completed: "bg-blue-100 text-blue-700",
+    Terminated: "bg-red-100 text-red-700",
+  }
+
+  // One trial = one clickable panel → Trial Summary
+  const TrialPanel = ({ tr }: { tr: typeof crcTrials[0] }) => (
+    <button onClick={() => setSelectedTrial(tr)} className="w-full text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{tr.id}</span>
+        <div className="flex items-center gap-1.5">
+          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", trialStatusColor[tr.status] || "bg-slate-100 text-slate-600")}>{tr.status}</span>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </div>
+      </div>
+      <h4 className="font-semibold text-[#0F172A] text-sm mb-2">{tr.title}</h4>
+      <div className="grid grid-cols-2 gap-y-1.5 gap-x-3">
+        {[
+          { label: "Phase", val: tr.phase },
+          { label: "Disease", val: tr.disease },
+          { label: "Drug", val: tr.drug },
+          { label: "PI Name", val: tr.pi },
+          { label: "Department", val: tr.department },
+        ].map(f => (
+          <div key={f.label}>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wide">{f.label}</p>
+            <p className="text-xs font-medium text-[#0F172A]">{f.val}</p>
+          </div>
+        ))}
+      </div>
+    </button>
+  )
   const [completedVisits, setCompletedVisits] = useState<Set<string>>(new Set(
     todayVisits.filter(v => v.done).map(v => v.id)
   ))
@@ -122,6 +164,17 @@ export function ResearchTeamDashboard({ onNavigate }: ResearchTeamDashboardProps
             />
           </div>
           <p className="text-xs text-blue-200">{todayTasksDone}/{todayTasksTotal} tasks done today</p>
+        </div>
+      </div>
+
+      {/* Trials Panel */}
+      <div className="px-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-[#0F172A] font-[family-name:var(--font-heading)]">My Trials</h3>
+          <button onClick={() => setShowAllTrials(true)} className="text-[#2563EB] text-sm font-medium flex items-center gap-1">See All <ChevronRight className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-3">
+          {crcTrials.slice(0, 2).map(tr => <TrialPanel key={tr.id} tr={tr} />)}
         </div>
       </div>
 
@@ -383,6 +436,58 @@ export function ResearchTeamDashboard({ onNavigate }: ResearchTeamDashboardProps
       </button>
     </div>
   )
+
+  // ── Trial Summary (CRC view) ─────────────────────────────
+  if (selectedTrial) {
+    const tr = selectedTrial
+    return (
+      <div className="h-full flex flex-col bg-[#F8FAFC]">
+        <div className="bg-[#0D1B3E] text-white px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setSelectedTrial(null)} className="p-1"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+          <span className="font-semibold flex-1">{tr.id}</span>
+        </div>
+        <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+          <div className="bg-[#0D1B3E] rounded-2xl p-5 text-white">
+            <div className="flex items-start justify-between mb-3">
+              <span className="px-2 py-0.5 bg-blue-500/30 text-blue-200 text-xs rounded-full font-medium">{tr.id}</span>
+              <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", trialStatusColor[tr.status] || "bg-slate-100 text-slate-600")}>{tr.status}</span>
+            </div>
+            <h2 className="text-lg font-bold mb-3">{tr.title}</h2>
+            <div className="grid grid-cols-2 gap-y-2.5 gap-x-3">
+              {[
+                { label: "Phase", val: tr.phase },
+                { label: "Disease", val: tr.disease },
+                { label: "Drug", val: tr.drug },
+                { label: "PI Name", val: tr.pi },
+                { label: "Department", val: tr.department },
+                { label: "Status", val: tr.status },
+              ].map(f => (
+                <div key={f.label}>
+                  <p className="text-[10px] text-blue-200/80 uppercase tracking-wide">{f.label}</p>
+                  <p className="text-sm font-medium">{f.val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── All Trials list ──────────────────────────────────────
+  if (showAllTrials) {
+    return (
+      <div className="h-full flex flex-col bg-[#F8FAFC]">
+        <div className="bg-[#0D1B3E] text-white px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setShowAllTrials(false)} className="p-1"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+          <span className="font-semibold flex-1">My Trials</span>
+        </div>
+        <div className="flex-1 overflow-auto px-4 py-4 space-y-3">
+          {crcTrials.map(tr => <TrialPanel key={tr.id} tr={tr} />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC]">

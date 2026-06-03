@@ -52,6 +52,7 @@ import { ResearchTeamDashboard } from "@/components/clinical/screens/research-te
 import { TeamScreen } from "@/components/clinical/screens/team-screen"
 import { ShareScheduleFlow } from "@/components/clinical/screens/share-schedule-flow"
 import { cn } from "@/lib/utils"
+import { LanguageProvider } from "@/lib/i18n"
 
 type Screen =
   | "welcome"
@@ -201,8 +202,12 @@ export default function PatientVisitScheduleApp() {
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null)
   const [history, setHistory] = useState<Screen[]>(["welcome"])
   const [userFilter, setUserFilter] = useState<string | undefined>(undefined)
+  // When a trial's schedule is saved, open the Sponsor Dashboard on that trial's summary.
+  const [openTrialSummary, setOpenTrialSummary] = useState(false)
 
   const navigate = (screen: Screen | string) => {
+    // Clear the pending trial-summary request on any nav except into the dashboard itself.
+    if (screen !== "sponsor-dashboard") setOpenTrialSummary(false)
     // Handle admin-users with filter (e.g., "admin-users-Sponsor")
     if (screen.startsWith("admin-users-")) {
       const filter = screen.replace("admin-users-", "")
@@ -259,6 +264,7 @@ export default function PatientVisitScheduleApp() {
           <OTPScreen
             onVerify={() => navigate("password")}
             onBack={goBack}
+            entityType={selectedEntity}
           />
         )
       case "password":
@@ -299,7 +305,7 @@ export default function PatientVisitScheduleApp() {
           />
         )
       case "sponsor-dashboard":
-        return <SponsorDashboard onNavigate={(screen) => navigate(screen as Screen)} />
+        return <SponsorDashboard onNavigate={(screen) => navigate(screen as Screen)} initialTrialId={openTrialSummary ? "Protocol-001" : undefined} />
       case "pi-dashboard":
         return <PIDashboard onNavigate={(screen) => navigate(screen as Screen)} />
       case "research-team-dashboard":
@@ -318,7 +324,7 @@ export default function PatientVisitScheduleApp() {
       case "visit-schedule":
         return (
           <VisitScheduleScreen
-            onSave={() => navigate("sponsor-dashboard")}
+            onSave={() => { setOpenTrialSummary(true); navigate("sponsor-dashboard") }}
             onBack={goBack}
           />
         )
@@ -544,6 +550,7 @@ export default function PatientVisitScheduleApp() {
   }
 
   return (
+    <LanguageProvider>
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -764,5 +771,6 @@ export default function PatientVisitScheduleApp() {
         </div>
       </div>
     </div>
+    </LanguageProvider>
   )
 }

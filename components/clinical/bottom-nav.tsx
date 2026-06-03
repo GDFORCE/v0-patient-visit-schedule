@@ -2,6 +2,7 @@
 
 import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard, MessageCircle, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n"
 
 export type UserRole = "patient" | "sponsor" | "investigator" | "pi" | "crc" | "admin"
 
@@ -60,7 +61,19 @@ const patientTabs2 = [
   { id: "me", label: "Me", icon: User },
 ]
 
+// Maps the English nav labels to translation keys. Labels not listed here
+// (e.g. sponsor/admin-only tabs) are shown verbatim.
+const navLabelKeys: Record<string, string> = {
+  "Home": "nav.home",
+  "My Trial": "nav.myTrial",
+  "Calendar": "nav.calendar",
+  "Notifs": "nav.notifs",
+  "Me": "nav.me",
+  "Messages": "nav.messages",
+}
+
 export function BottomNav({ activeTab, onTabChange, role = "investigator", notificationCount = 0 }: BottomNavProps) {
+  const { t } = useLanguage()
   const tabs =
     role === "patient" ? patientTabs2 :
     role === "sponsor" ? sponsorTabs :
@@ -95,7 +108,7 @@ export function BottomNav({ activeTab, onTabChange, role = "investigator", notif
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-medium">{tab.label}</span>
+            <span className="text-[10px] font-medium">{navLabelKeys[tab.label] ? t(navLabelKeys[tab.label]) : tab.label}</span>
           </button>
         )
       })}

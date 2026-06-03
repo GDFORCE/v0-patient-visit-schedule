@@ -53,40 +53,6 @@ export function PasswordScreen({ onCreateAccount, onBack }: PasswordScreenProps)
           </div>
         </div>
         
-        {/* Strength Bar */}
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[#2563EB] to-[#0D9488] transition-all"
-                style={{ width: `${strengthPercentage}%` }}
-              />
-            </div>
-            <span className={cn(
-              "text-sm font-medium",
-              strengthPercentage >= 80 ? "text-[#0D9488]" : strengthPercentage >= 60 ? "text-[#D97706]" : "text-[#DC2626]"
-            )}>
-              {strengthPercentage >= 80 ? "Strong" : strengthPercentage >= 60 ? "Medium" : "Weak"}
-            </span>
-          </div>
-          
-          {/* Rules Checklist */}
-          <div className="space-y-1.5">
-            {passwordRules.map((rule) => (
-              <div key={rule.label} className="flex items-center gap-2">
-                {rule.met ? (
-                  <Check className="w-4 h-4 text-[#0D9488]" />
-                ) : (
-                  <X className="w-4 h-4 text-gray-400" />
-                )}
-                <span className={cn("text-sm", rule.met ? "text-[#0D9488]" : "text-gray-500")}>
-                  {rule.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
         {/* Confirm Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password *</label>
@@ -110,6 +76,40 @@ export function PasswordScreen({ onCreateAccount, onBack }: PasswordScreenProps)
               <Check className="w-4 h-4" /> Passwords match
             </p>
           )}
+        </div>
+
+        {/* Strength Bar + Rules — shown below both password fields */}
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#2563EB] to-[#0D9488] transition-all"
+                style={{ width: `${strengthPercentage}%` }}
+              />
+            </div>
+            <span className={cn(
+              "text-sm font-medium",
+              strengthPercentage >= 80 ? "text-[#0D9488]" : strengthPercentage >= 60 ? "text-[#D97706]" : "text-[#DC2626]"
+            )}>
+              {strengthPercentage >= 80 ? "Strong" : strengthPercentage >= 60 ? "Medium" : "Weak"}
+            </span>
+          </div>
+
+          {/* Rules Checklist */}
+          <div className="space-y-1.5">
+            {passwordRules.map((rule) => (
+              <div key={rule.label} className="flex items-center gap-2">
+                {rule.met ? (
+                  <Check className="w-4 h-4 text-[#0D9488]" />
+                ) : (
+                  <X className="w-4 h-4 text-gray-400" />
+                )}
+                <span className={cn("text-sm", rule.met ? "text-[#0D9488]" : "text-gray-500")}>
+                  {rule.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       
