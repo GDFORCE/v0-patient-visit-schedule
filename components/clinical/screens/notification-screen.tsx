@@ -40,7 +40,7 @@ const typeConfig: Record<NotifType, { icon: typeof Bell; circleColor: string; ic
 }
 
 const initialNotifications: Notification[] = [
-  { id: "1", type: "visit-reminder",     title: "Visit 7 Tomorrow",       body: "Your Follow-Up Visit 7 is scheduled for 24 May 2025 at 10:00 AM at AIIMS Delhi. Please arrive 15 minutes early.",           time: "2h ago",          read: false, group: "today" },
+  { id: "1", type: "visit-reminder",     title: "Visit 7 Tomorrow",       body: "Your next is Visit No. 7 Follow-Up Visit at AIIMS Delhi Ansari Nagar, New Delhi as scheduled on 24 May 2025, 22-26 May 2025",           time: "2h ago",          read: false, group: "today" },
   { id: "2", type: "medication-reminder",title: "Take Metformin 500mg",   body: "It's 8:00 AM — time to take your morning dose of Metformin 500mg.",                                                        time: "8:00 AM",         read: false, group: "today" },
   { id: "3", type: "medication-taken",   title: "Medication Logged",      body: "Metformin 500mg marked as taken at 8:03 AM. Good job keeping up with your schedule!",                                       time: "8:03 AM",         read: true,  group: "today" },
   { id: "4", type: "visit-completed",   title: "Visit 6 Confirmed",      body: "Your Visit 6 has been marked complete by Dr. Sharma. Next visit: Visit 7 on 24 May.",                                       time: "Yesterday, 3:30 PM", read: true, group: "yesterday" },

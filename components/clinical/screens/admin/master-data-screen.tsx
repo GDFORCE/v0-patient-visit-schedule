@@ -136,29 +136,40 @@ export function MasterDataScreen({ onBack }: MasterDataScreenProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
-        </button>
-        <h1 className="text-lg font-semibold text-[#0D1B3E] font-[family-name:var(--font-heading)]">
-          Master Data
-        </h1>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">Others Specify approvals</h1>
+        <p className="text-sm text-gray-500">Review custom dropdown values submitted by users across all modules.</p>
+      </div>
+
+      {/* Summary tiles (ADM-05 Section 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Pending", value: values.filter((v) => v.status === "pending").length, color: "text-amber-600" },
+          { label: "Approved (global)", value: values.filter((v) => v.status === "approved").length, color: "text-green-600" },
+          { label: "Rejected", value: values.filter((v) => v.status === "rejected").length, color: "text-red-600" },
+          { label: "Total submissions", value: values.length, color: "text-[#1A3872]" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className={`text-2xl font-bold leading-none ${t.color}`}>{t.value}</div>
+            <div className="text-xs text-gray-500 mt-2">{t.label}</div>
+          </div>
+        ))}
       </div>
 
       {/* Info Banner */}
-      <div className="mx-4 mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-start gap-3">
+      <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-[#2563EB] mt-0.5 flex-shrink-0" />
         <p className="text-sm text-[#1A3872]">
-          Review custom values submitted by users under &apos;Others / Specify&apos; fields. Approved values become globally available.
+          Approved values are added to the global dropdown list visible to all users. Rejected values remain private to the submitting user.
         </p>
       </div>
 
       {/* Filter */}
-      <div className="px-4 mt-4">
+      <div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full h-11 bg-white rounded-lg border-gray-200">
+          <SelectTrigger className="w-full sm:w-[240px] h-10 bg-white rounded-lg border-gray-200">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -171,7 +182,7 @@ export function MasterDataScreen({ onBack }: MasterDataScreenProps) {
       </div>
 
       {/* Custom Values List */}
-      <div className="flex-1 overflow-auto px-4 py-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filteredValues.map((item) => (
           <div
             key={item.id}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { ChevronLeft, Send, Mic, Paperclip, Image, FileText, MoreVertical, Check, CheckCheck, Play, Pause, X, Search, Camera } from "lucide-react"
+import { Activity, Building2, ChevronLeft, Send, Mic, Paperclip, Image, FileText, MoreVertical, Check, CheckCheck, Play, Pause, X, Search, Camera, Plus, ShieldCheck, Stethoscope, UsersRound } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ── Types ────────────────────────────────────────────────
@@ -84,6 +84,44 @@ const channelTypeColor: Record<ChannelType, string> = {
   "admin-user": "bg-red-100 text-red-700",
 }
 
+const channelTypeMeta = {
+  "sponsor-pi": {
+    icon: Stethoscope,
+    accent: "bg-blue-500",
+    soft: "bg-blue-50 text-blue-700 border-blue-100",
+    avatar: "bg-blue-50 text-blue-700 ring-blue-100",
+  },
+  "sponsor-rt": {
+    icon: Building2,
+    accent: "bg-teal-500",
+    soft: "bg-teal-50 text-teal-700 border-teal-100",
+    avatar: "bg-teal-50 text-teal-700 ring-teal-100",
+  },
+  "pi-patient": {
+    icon: Activity,
+    accent: "bg-violet-500",
+    soft: "bg-violet-50 text-violet-700 border-violet-100",
+    avatar: "bg-violet-50 text-violet-700 ring-violet-100",
+  },
+  "rt-patient": {
+    icon: UsersRound,
+    accent: "bg-emerald-500",
+    soft: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    avatar: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  },
+  "admin-user": {
+    icon: ShieldCheck,
+    accent: "bg-rose-500",
+    soft: "bg-rose-50 text-rose-700 border-rose-100",
+    avatar: "bg-rose-50 text-rose-700 ring-rose-100",
+  },
+} satisfies Record<ChannelType, {
+  icon: typeof Stethoscope
+  accent: string
+  soft: string
+  avatar: string
+}>
+
 // Sample conversation messages per channel
 const channelMessages: Record<string, Message[]> = {
   "sp-pi-1": [
@@ -128,7 +166,7 @@ function getStatusIcon(status: string, isSelf: boolean) {
 
 export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
   const [activeChannel, setActiveChannel] = useState<ChatChannel | null>(null)
-  const [channelFilter, setChannelFilter] = useState<ChannelType | "all">("all")
+  const [channelFilter, setChannelFilter] = useState<ChannelType>(roleChannelTypes[userRole][0])
   const [search, setSearch]               = useState("")
   const [messages, setMessages]           = useState<Message[]>(defaultMessages)
   const [inputText, setInputText]         = useState("")
@@ -136,6 +174,7 @@ export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
   const [recordingTime, setRecordingTime] = useState(0)
   const [playingVoice, setPlayingVoice]   = useState<string | null>(null)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const [showCompose, setShowCompose] = useState(false)
   const messagesEndRef   = useRef<HTMLDivElement>(null)
   const recordingTimer   = useRef<NodeJS.Timeout | null>(null)
 
@@ -147,8 +186,12 @@ export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
   const allowedTypes  = roleChannelTypes[userRole]
   const visibleChannels = allChannels.filter(ch => allowedTypes.includes(ch.channelType))
 
+  useEffect(() => {
+    if (!allowedTypes.includes(channelFilter)) setChannelFilter(allowedTypes[0])
+  }, [allowedTypes, channelFilter])
+
   const filteredChannels = visibleChannels.filter(ch => {
-    const matchFilter = channelFilter === "all" || ch.channelType === channelFilter
+    const matchFilter = ch.channelType === channelFilter
     const matchSearch = search === "" || ch.name.toLowerCase().includes(search.toLowerCase()) || ch.role.toLowerCase().includes(search.toLowerCase())
     return matchFilter && matchSearch
   })
@@ -166,6 +209,7 @@ export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
     setActiveChannel(ch)
     setMessages(channelMessages[ch.id] ?? defaultMessages)
     setShowAttachMenu(false)
+    setShowCompose(false)
   }
 
   const handleSend = () => {
@@ -411,104 +455,147 @@ export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
 
   // ── Channel List View ─────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
+    <div className="relative flex flex-col h-full bg-[#F3F6FA]">
       {/* Header */}
-      <div className="bg-[#1A3872] text-white px-4 py-3">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="bg-[#132F63] text-white px-4 pt-3 pb-4">
+        <div className="flex items-center gap-3 mb-4">
           {onBack && (
-            <button onClick={onBack} className="p-1">
+            <button onClick={onBack} className="p-1 rounded-full hover:bg-white/10">
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="flex-1">
-            <h1 className="text-base font-semibold">Messages</h1>
-            <p className="text-xs text-blue-200">
-              {totalUnread > 0 ? `${totalUnread} unread` : "All caught up"}
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-blue-200">Secure inbox</p>
+            <h1 className="text-xl font-semibold leading-tight">Messages</h1>
+          </div>
+          <button
+            onClick={() => setShowCompose(true)}
+            className="h-10 w-10 rounded-full bg-white text-[#132F63] shadow-sm flex items-center justify-center"
+            aria-label="Start new message"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+          <div className="rounded-full bg-white/12 px-3 py-1.5 text-right">
+            <p className="text-sm font-bold leading-none">{totalUnread}</p>
+            <p className="mt-0.5 text-[10px] font-medium text-blue-100">
+              {totalUnread > 0 ? "unread" : "clear"}
             </p>
           </div>
         </div>
         {/* Search */}
-        <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3 py-2">
-          <Search className="h-4 w-4 text-white/60 flex-shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">
+          <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search conversations…"
-            className="flex-1 bg-transparent text-white placeholder-white/50 text-sm outline-none"
+            placeholder="Search conversations..."
+            className="flex-1 bg-transparent text-slate-900 placeholder-slate-400 text-sm outline-none"
           />
-          {search && <button onClick={() => setSearch("")}><X className="h-4 w-4 text-white/60" /></button>}
+          {search && <button onClick={() => setSearch("")} className="rounded-full p-0.5 hover:bg-slate-100"><X className="h-4 w-4 text-slate-400" /></button>}
         </div>
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-2 px-4 py-2.5 bg-white border-b border-slate-100 overflow-x-auto">
-        <button
-          onClick={() => setChannelFilter("all")}
-          className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
-            channelFilter === "all" ? "bg-[#1A3872] text-white border-[#1A3872]" : "bg-white text-slate-600 border-slate-200")}
-        >
-          All ({visibleChannels.length})
-        </button>
-        {allowedTypes.map(type => (
-          <button
-            key={type}
-            onClick={() => setChannelFilter(type)}
-            className={cn("flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap",
-              channelFilter === type ? "bg-[#1A3872] text-white border-[#1A3872]" : "bg-white text-slate-600 border-slate-200")}
-          >
-            {channelTypeLabel[type]}
-          </button>
-        ))}
+      <div className="flex gap-2 bg-white px-4 py-3 overflow-x-auto border-b border-slate-100">
+        {allowedTypes.map(type => {
+          const meta = channelTypeMeta[type]
+          const Icon = meta.icon
+          const count = visibleChannels.filter(ch => ch.channelType === type).length
+
+          return (
+            <button
+              key={type}
+              onClick={() => setChannelFilter(type)}
+              className={cn("flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap inline-flex items-center gap-1.5",
+                channelFilter === type ? "bg-[#132F63] text-white border-[#132F63]" : meta.soft)}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {channelTypeLabel[type]}
+              <span className={cn("ml-0.5 rounded-full px-1.5 py-0.5 text-[10px]", channelFilter === type ? "bg-white/15 text-white" : "bg-white/70")}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Channel list grouped */}
-      <div className="flex-1 overflow-auto">
-        {Object.entries(groupedChannels).map(([type, channels]) => (
-          <div key={type}>
+      <div className="flex-1 overflow-auto px-4 py-3">
+        {Object.entries(groupedChannels).map(([type, channels]) => {
+          const channelType = type as ChannelType
+          const meta = channelTypeMeta[channelType]
+          const Icon = meta.icon
+
+          return (
+          <div key={type} className="mb-4 last:mb-0">
             {/* Section header */}
-            <div className={cn("px-4 py-2 flex items-center gap-2", channelTypeColor[type as ChannelType])}>
-              <span className="text-[11px] font-bold uppercase tracking-wider">
-                {channelTypeLabel[type as ChannelType]}
-              </span>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={cn("h-7 w-7 rounded-full flex items-center justify-center border", meta.soft)}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  {channelTypeLabel[channelType]}
+                </span>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-400">{channels.length}</span>
             </div>
 
-            {channels.map(ch => (
-              <button
-                key={ch.id}
-                onClick={() => openChannel(ch)}
-                className="w-full px-4 py-3.5 flex items-center gap-3 bg-white border-b border-slate-50 hover:bg-slate-50 text-left"
-              >
-                <div className="relative flex-shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-[#DBEAFE] flex items-center justify-center text-sm font-bold text-[#1A3872]">
-                    {ch.avatar}
-                  </div>
-                  {ch.online && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+            <div className="space-y-2">
+              {channels.map(ch => (
+                <button
+                  key={ch.id}
+                  onClick={() => openChannel(ch)}
+                  className={cn(
+                    "relative w-full overflow-hidden rounded-lg border bg-white px-3 py-3 text-left shadow-sm transition-colors hover:bg-slate-50",
+                    ch.unread > 0 ? "border-blue-100 shadow-blue-950/5" : "border-slate-100"
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className={cn("text-sm truncate", ch.unread > 0 ? "font-bold text-[#0F172A]" : "font-medium text-[#0F172A]")}>
-                      {ch.name}
-                    </p>
-                    <p className={cn("text-[11px] flex-shrink-0 ml-2", ch.unread > 0 ? "text-[#1A3872] font-semibold" : "text-slate-400")}>
-                      {ch.time}
-                    </p>
+                >
+                  <span className={cn("absolute inset-y-0 left-0 w-1", ch.unread > 0 ? meta.accent : "bg-transparent")} />
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className={cn("w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold ring-1", meta.avatar)}>
+                        {ch.avatar}
+                      </div>
+                      {ch.online && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <p className={cn("min-w-0 flex-1 truncate text-sm", ch.unread > 0 ? "font-bold text-slate-950" : "font-semibold text-slate-800")}>
+                          {ch.name}
+                        </p>
+                        <p className={cn("flex-shrink-0 text-[11px]", ch.unread > 0 ? "font-bold text-[#132F63]" : "font-medium text-slate-400")}>
+                          {ch.time}
+                        </p>
+                      </div>
+
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className={cn("max-w-full truncate rounded-full border px-2 py-0.5 text-[10px] font-semibold", meta.soft)}>
+                          {ch.role}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <p className={cn("min-w-0 flex-1 truncate text-xs", ch.unread > 0 ? "font-semibold text-slate-700" : "text-slate-500")}>
+                          {ch.lastMessage}
+                        </p>
+                        {ch.unread > 0 && (
+                          <span className="h-5 min-w-5 rounded-full bg-[#132F63] px-1.5 text-center text-[10px] font-bold leading-5 text-white">
+                            {ch.unread}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 truncate">{ch.role}</p>
-                  <p className={cn("text-xs truncate mt-0.5", ch.unread > 0 ? "text-slate-700 font-medium" : "text-slate-400")}>
-                    {ch.lastMessage}
-                  </p>
-                </div>
-                {ch.unread > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-[#1A3872] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                    {ch.unread}
-                  </span>
-                )}
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
-        ))}
+          )
+        })}
 
         {filteredChannels.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 gap-3 text-center px-6">
@@ -517,6 +604,75 @@ export function ChatScreen({ onBack, userRole = "sponsor" }: ChatScreenProps) {
           </div>
         )}
       </div>
+
+      {showCompose && (
+        <div className="absolute inset-0 z-20 flex flex-col bg-[#F3F6FA]">
+          <div className="bg-[#132F63] px-4 py-4 text-white">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCompose(false)}
+                className="rounded-full p-1 hover:bg-white/10"
+                aria-label="Close new message"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-blue-200">Start chat</p>
+                <h2 className="text-lg font-semibold leading-tight">New message</h2>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto px-4 py-3">
+            {allowedTypes.map(type => {
+              const contacts = visibleChannels.filter(ch => ch.channelType === type)
+              if (contacts.length === 0) return null
+
+              const meta = channelTypeMeta[type]
+              const Icon = meta.icon
+
+              return (
+                <div key={type} className="mb-4 last:mb-0">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className={cn("h-7 w-7 rounded-full flex items-center justify-center border", meta.soft)}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      {channelTypeLabel[type]}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {contacts.map(ch => (
+                      <button
+                        key={ch.id}
+                        onClick={() => openChannel(ch)}
+                        className="flex w-full items-center gap-3 rounded-lg border border-slate-100 bg-white px-3 py-3 text-left shadow-sm hover:bg-slate-50"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <div className={cn("h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold ring-1", meta.avatar)}>
+                            {ch.avatar}
+                          </div>
+                          {ch.online && (
+                            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-slate-900">{ch.name}</p>
+                          <p className="truncate text-xs text-slate-500">{ch.role}</p>
+                        </div>
+                        <span className="rounded-full bg-[#132F63] px-2.5 py-1 text-[11px] font-semibold text-white">
+                          Message
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

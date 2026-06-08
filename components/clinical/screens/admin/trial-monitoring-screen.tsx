@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -122,121 +123,123 @@ export function TrialMonitoringScreen({ onBack }: TrialMonitoringScreenProps) {
     }
   };
 
+  const tiles = [
+    { label: "Total trials", value: trials.length, accent: "text-[#1A3872]" },
+    { label: "Active", value: trials.filter((t) => t.status === "Active").length, accent: "text-green-600" },
+    { label: "Completed", value: trials.filter((t) => t.status === "Completed").length, accent: "text-blue-600" },
+    { label: "Suspended", value: trials.filter((t) => t.status === "Suspended").length, accent: "text-red-600" },
+    { label: "Total enrolled", value: trials.reduce((n, t) => n + t.patients, 0), accent: "text-[#1A3872]" },
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Trial Monitoring</h1>
-            <p className="text-xs text-blue-200">Operational oversight only</p>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">Trial metadata & recruitment</h1>
+        <p className="text-sm text-gray-500">
+          Operational oversight only · aggregate counts · no subject-level data (BTG required).
+        </p>
+      </div>
+
+      {/* Summary tiles (ADM-06 Section 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className={`text-2xl font-bold leading-none ${t.accent}`}>{t.value}</div>
+            <div className="text-xs text-gray-500 mt-2">{t.label}</div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Search & Filters */}
-      <div className="p-3 bg-white border-b space-y-2">
-        <div className="relative">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search trials..."
+            placeholder="Search by protocol ID, title, or sponsor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-10"
           />
         </div>
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px] h-10 text-sm">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All status</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Trial List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {filteredTrials.map((trial) => (
-          <Card key={trial.id} className="border-0 shadow-sm">
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(trial.status)}
-                  <Badge className={`text-xs ${getStatusColor(trial.status)}`}>
-                    {trial.status}
-                  </Badge>
-                </div>
-                <Button variant="ghost" size="sm" className="h-7 text-xs">
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
-                </Button>
-              </div>
-
-              <h3 className="font-medium text-sm mb-1">{trial.title}</h3>
-              <p className="text-xs text-gray-500 mb-3">{trial.id}</p>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Building2 className="h-3 w-3 text-gray-400" />
-                  <span>Sponsor: {trial.sponsor}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <FileText className="h-3 w-3 text-gray-400" />
-                  <span>CRO: {trial.cro}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Users className="h-3 w-3 text-gray-400" />
-                  <span>Site: {trial.site}</span>
-                </div>
-              </div>
-
-              <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">Enrollment Progress</span>
-                  <span className="text-xs font-medium">
-                    {trial.patients}/{trial.targetEnrollment}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[#2563EB] h-2 rounded-full"
-                    style={{
-                      width: `${(trial.patients / trial.targetEnrollment) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t text-xs">
-                <div className="flex items-center justify-between text-gray-500 mb-1">
-                  <span>Schedule Version: {trial.scheduleVersion}</span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {trial.lastModified}
-                  </span>
-                </div>
-                <p className="text-gray-600">
-                  <span className="font-medium">Last change:</span> {trial.changeSummary}
-                </p>
-                <p className="text-gray-400 mt-1">Modified by: {trial.modifiedBy}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Trial metadata table (ADM-06 Section 2) */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 font-medium">Protocol / Study</th>
+                <th className="px-4 py-3 font-medium">Sponsor / CRO</th>
+                <th className="px-4 py-3 font-medium">Enrollment</th>
+                <th className="px-4 py-3 font-medium">Last modified</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredTrials.map((trial) => (
+                <tr key={trial.id} className="hover:bg-gray-50/70 align-top">
+                  <td className="px-4 py-3 max-w-[280px]">
+                    <div className="font-medium text-gray-900">{trial.title}</div>
+                    <div className="text-xs text-gray-500">{trial.id}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="flex items-center gap-1"><Building2 className="h-3 w-3 text-gray-400" /> {trial.sponsor}</div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5"><FileText className="h-3 w-3 text-gray-400" /> {trial.cro}</div>
+                  </td>
+                  <td className="px-4 py-3 w-[180px]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-gray-500">Enrolled</span>
+                      <span className="font-medium">{trial.patients}/{trial.targetEnrollment}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-[#2563EB] h-2 rounded-full"
+                        style={{ width: `${(trial.patients / trial.targetEnrollment) * 100}%` }}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">
+                    <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {trial.lastModified}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{trial.changeSummary}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-1.5">
+                      {getStatusIcon(trial.status)}
+                      <Badge className={`text-xs ${getStatusColor(trial.status)}`}>{trial.status}</Badge>
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => toast.info(`${trial.id} — ${trial.title}`)}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" /> View
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredTrials.length === 0 && (
+          <p className="text-center text-sm text-gray-400 py-10">No trials match the current filters.</p>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
@@ -115,6 +118,33 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
 
+  // ADM-04-F1 Publish New Version form
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [newVersion, setNewVersion] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState("");
+  const [changeSummary, setChangeSummary] = useState("");
+  const [forceReacceptance, setForceReacceptance] = useState(true);
+
+  const currentVersionNum = 3.0;
+  const versionValid = parseFloat(newVersion.replace(/^v/i, "")) > currentVersionNum;
+  const canPublish = versionValid && effectiveDate && changeSummary.trim().length > 0;
+
+  const openPublish = () => {
+    setNewVersion("");
+    setEffectiveDate("");
+    setChangeSummary("");
+    setForceReacceptance(true);
+    setPublishOpen(true);
+  };
+  const handlePublish = () => {
+    if (!canPublish) {
+      toast.error("Enter a higher version, effective date, and change summary");
+      return;
+    }
+    toast.success(`T&C ${newVersion} published — users prompted on next login`);
+    setPublishOpen(false);
+  };
+
   const handleEdit = (version: typeof termsVersions[0]) => {
     setSelectedVersion(version);
     setEditContent(version.content);
@@ -127,50 +157,34 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/10"
-              onClick={onBack}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">Terms & Policy</h1>
-              <p className="text-xs text-blue-200">Manage legal documents</p>
-            </div>
-          </div>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10">
-            <Plus className="h-4 w-4 mr-1" />
-            New Version
-          </Button>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-[#1A3872]">Terms &amp; Conditions management</h1>
+          <p className="text-sm text-gray-500">Publish new versions, track acceptance, and manage version history.</p>
         </div>
+        <Button className="bg-[#1A3872] hover:bg-[#15305f]" onClick={openPublish}>
+          <Plus className="h-4 w-4 mr-2" /> Publish new version
+        </Button>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start px-3 pt-2 bg-white border-b rounded-none h-auto">
-          <TabsTrigger value="versions" className="text-xs">
-            Versions
-          </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs">
-            Acceptance History
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-white border border-gray-200 rounded-lg h-auto p-1">
+          <TabsTrigger value="versions" className="text-sm">Versions</TabsTrigger>
+          <TabsTrigger value="history" className="text-sm">Acceptance history</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="versions" className="flex-1 overflow-y-auto p-3 space-y-3 mt-0">
+        <TabsContent value="versions" className="space-y-5 mt-0">
           {/* Active Documents */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-500">Active Documents</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {termsVersions
               .filter((v) => v.status === "Active")
               .map((version) => (
-                <Card key={version.id} className="border-0 shadow-sm">
+                <Card key={version.id} className="border border-gray-200 shadow-sm">
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -222,15 +236,17 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
                   </CardContent>
                 </Card>
               ))}
+            </div>
           </div>
 
           {/* Previous Versions */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-500">Previous Versions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {termsVersions
               .filter((v) => v.status === "Inactive")
               .map((version) => (
-                <Card key={version.id} className="border-0 shadow-sm bg-gray-50">
+                <Card key={version.id} className="border border-gray-200 shadow-sm bg-gray-50">
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -261,15 +277,17 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
                   </CardContent>
                 </Card>
               ))}
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="history" className="flex-1 overflow-y-auto p-3 space-y-2 mt-0">
+        <TabsContent value="history" className="space-y-2 mt-0">
           <p className="text-xs text-gray-500 mb-3">
             Users who accepted terms during login
           </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {acceptanceHistory.map((record, idx) => (
-            <Card key={idx} className="border-0 shadow-sm">
+            <Card key={idx} className="border border-gray-200 shadow-sm">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -288,12 +306,13 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
               </CardContent>
             </Card>
           ))}
+          </div>
         </TabsContent>
       </Tabs>
 
       {/* View/Edit Sheet */}
       <Sheet open={!!selectedVersion} onOpenChange={() => setSelectedVersion(null)}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl">
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
               <span>
@@ -321,7 +340,13 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
                     >
                       Cancel
                     </Button>
-                    <Button className="flex-1 bg-[#1A3872]">
+                    <Button
+                      className="flex-1 bg-[#1A3872]"
+                      onClick={() => {
+                        setIsEditing(false);
+                        toast.success("Changes saved");
+                      }}
+                    >
                       <Save className="h-4 w-4 mr-2" />
                       Save Changes
                     </Button>
@@ -352,6 +377,50 @@ export function TermsManagementScreen({ onBack }: TermsManagementScreenProps) {
               )}
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Publish New Version form (ADM-04-F1) */}
+      <Sheet open={publishOpen} onOpenChange={setPublishOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Publish new T&amp;C version</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3">
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1">New version number (higher than v3.0)</p>
+              <Input value={newVersion} onChange={(e) => setNewVersion(e.target.value)} placeholder="v3.1" />
+              {newVersion && !versionValid && (
+                <p className="text-[10px] text-red-600 mt-1">Must be higher than the current v3.0.</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1">Effective date</p>
+              <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1">Change summary (shown to users on accept)</p>
+              <Textarea value={changeSummary} onChange={(e) => setChangeSummary(e.target.value)} className="min-h-[70px]" />
+            </div>
+            <div className="rounded-lg border border-dashed border-gray-300 p-3 text-center text-xs text-gray-500">
+              Upload T&amp;C document (PDF / DOCX) — optional
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={forceReacceptance} onCheckedChange={(v) => setForceReacceptance(!!v)} />
+              Force re-acceptance on next login
+            </label>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <Button variant="outline" className="h-9 text-xs" onClick={() => toast.info("Preview shown to users")}>
+                <Eye className="h-3 w-3 mr-1" /> Preview
+              </Button>
+              <Button variant="outline" className="h-9 text-xs" onClick={() => setPublishOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="h-9 text-xs bg-[#1A3872]" disabled={!canPublish} onClick={handlePublish}>
+                Publish
+              </Button>
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </div>

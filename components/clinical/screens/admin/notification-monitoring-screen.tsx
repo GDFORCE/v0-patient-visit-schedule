@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ const notifications = [
     channel: "Push",
     recipient: "A*** K***",
     recipientType: "Patient",
-    message: "Your Visit 3 is scheduled for tomorrow at 10:00 AM",
+    message: "Your next is Visit No. 3 Follow-Up Visit at Apollo Hospital Mumbai, Maharashtra as scheduled on 16 Mar 2024, 14-18 Mar 2024",
     status: "Delivered",
     sentAt: "2024-03-15 08:00 AM",
     deliveredAt: "2024-03-15 08:00 AM",
@@ -135,63 +136,51 @@ export function NotificationMonitoringScreen({ onBack }: NotificationMonitoringS
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/10"
-              onClick={onBack}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">Notifications</h1>
-              <p className="text-xs text-blue-200">Monitoring & Configuration</p>
-            </div>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-[#1A3872]">Notification delivery</h1>
+          <p className="text-sm text-gray-500">Delivery metadata only · message content &amp; patient identity are protected.</p>
+        </div>
+        <Button variant="outline" onClick={() => toast.info("Notification settings")}>
+          <Settings className="h-4 w-4 mr-2" /> Settings
+        </Button>
+      </div>
+
+      {/* Summary tiles (ADM-07 Section 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-xl bg-white border border-gray-200 p-4">
+          <div className="text-2xl font-bold text-green-600 leading-none">{stats.delivered.toLocaleString()}</div>
+          <div className="text-xs text-gray-500 mt-2">Sent (7 days)</div>
+        </div>
+        <div className="rounded-xl bg-white border border-gray-200 p-4">
+          <div className="text-2xl font-bold text-red-600 leading-none">{stats.failed}</div>
+          <div className="text-xs text-gray-500 mt-2">Failed</div>
+        </div>
+        <div className="rounded-xl bg-white border border-gray-200 p-4">
+          <div className="text-2xl font-bold text-amber-600 leading-none">{stats.pending}</div>
+          <div className="text-xs text-gray-500 mt-2">Pending</div>
+        </div>
+        <div className="rounded-xl bg-white border border-gray-200 p-4">
+          <div className="text-2xl font-bold text-[#1A3872] leading-none">
+            {Math.round((stats.delivered / stats.totalToday) * 100)}%
           </div>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10">
-            <Settings className="h-5 w-5" />
-          </Button>
+          <div className="text-xs text-gray-500 mt-2">Delivery rate</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start px-3 pt-2 bg-white border-b rounded-none h-auto">
-          <TabsTrigger value="overview" className="text-xs">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs">
-            History
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="text-xs">
-            Settings
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-white border border-gray-200 rounded-lg h-auto p-1">
+          <TabsTrigger value="overview" className="text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="history" className="text-sm">Delivery log</TabsTrigger>
+          <TabsTrigger value="settings" className="text-sm">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="flex-1 overflow-y-auto p-3 space-y-3 mt-0">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-3">
-                <div className="text-2xl font-bold text-[#1A3872]">{stats.totalToday.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">Sent Today</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm border-l-4 border-l-red-500">
-              <CardContent className="p-3">
-                <div className="text-2xl font-bold text-red-500">{stats.failed}</div>
-                <div className="text-xs text-gray-500">Failed</div>
-              </CardContent>
-            </Card>
-          </div>
-
+        <TabsContent value="overview" className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-0">
           {/* Delivery Stats */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-2 pt-3 px-3">
               <CardTitle className="text-sm font-medium">Delivery Status</CardTitle>
             </CardHeader>
@@ -284,7 +273,12 @@ export function NotificationMonitoringScreen({ onBack }: NotificationMonitoringS
                   <div key={notif.id} className="p-2 bg-red-50 rounded-lg">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium">{notif.recipient}</span>
-                      <Button size="sm" variant="ghost" className="h-6 text-xs">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs"
+                        onClick={() => toast.success(`Retry queued for ${notif.recipient}`)}
+                      >
                         <RefreshCw className="h-3 w-3 mr-1" />
                         Retry
                       </Button>
@@ -297,36 +291,36 @@ export function NotificationMonitoringScreen({ onBack }: NotificationMonitoringS
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="flex-1 flex flex-col mt-0">
+        <TabsContent value="history" className="space-y-4 mt-0">
           {/* Filters */}
-          <div className="p-3 bg-white border-b space-y-2">
-            <div className="relative">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search notifications..."
+                placeholder="Search by recipient role or trigger event..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-9 h-10"
               />
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[100px] h-8 text-xs">
+                <SelectTrigger className="w-[130px] h-10 text-sm">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All status</SelectItem>
                   <SelectItem value="Delivered">Delivered</SelectItem>
                   <SelectItem value="Failed">Failed</SelectItem>
                   <SelectItem value="Pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={channelFilter} onValueChange={setChannelFilter}>
-                <SelectTrigger className="w-[100px] h-8 text-xs">
+                <SelectTrigger className="w-[130px] h-10 text-sm">
                   <SelectValue placeholder="Channel" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All channels</SelectItem>
                   <SelectItem value="Push">Push</SelectItem>
                   <SelectItem value="SMS">SMS</SelectItem>
                   <SelectItem value="Email">Email</SelectItem>
@@ -335,50 +329,70 @@ export function NotificationMonitoringScreen({ onBack }: NotificationMonitoringS
             </div>
           </div>
 
-          {/* Notification List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredNotifications.map((notif) => (
-              <Card key={notif.id} className="border-0 shadow-sm">
-                <CardContent className="p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                      {getChannelIcon(notif.channel)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{notif.recipient}</span>
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
-                            {notif.recipientType}
-                          </Badge>
-                        </div>
-                        {getStatusIcon(notif.status)}
-                      </div>
-                      <p className="text-xs text-gray-600 truncate">{notif.message}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {notif.type}
-                        </Badge>
-                        <span className="text-xs text-gray-400">{notif.sentAt}</span>
-                      </div>
-                      {notif.status === "Failed" && (
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-red-500">Error: {notif.error}</span>
-                          <Button size="sm" variant="ghost" className="h-6 text-xs">
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Retry
+          {/* Delivery log table (ADM-07 Section 3) */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 font-medium">Recipient role</th>
+                    <th className="px-4 py-3 font-medium">Trigger event</th>
+                    <th className="px-4 py-3 font-medium">Channel</th>
+                    <th className="px-4 py-3 font-medium">Timestamp</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredNotifications.map((notif) => (
+                    <tr key={notif.id} className="hover:bg-gray-50/70">
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="text-xs">{notif.recipientType}</Badge>
+                      </td>
+                      <td className="px-4 py-3 max-w-[320px]">
+                        <div className="font-medium text-gray-800">{notif.type}</div>
+                        {notif.status === "Failed" && (
+                          <div className="text-xs text-red-500">Error: {notif.error}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1.5 text-gray-600">
+                          {getChannelIcon(notif.channel)} {notif.channel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{notif.sentAt}</td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1.5">
+                          {getStatusIcon(notif.status)}
+                          <span className="text-xs text-gray-600">{notif.status}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {(notif.status === "Failed" || notif.status === "Pending") ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            onClick={() => toast.success(`Retry queued for ${notif.recipientType}`)}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry
                           </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filteredNotifications.length === 0 && (
+              <p className="text-center text-sm text-gray-400 py-10">No notifications match the current filters.</p>
+            )}
           </div>
         </TabsContent>
 
-        <TabsContent value="settings" className="flex-1 overflow-y-auto p-3 space-y-3 mt-0">
+        <TabsContent value="settings" className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-0">
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2 pt-3 px-3">
               <CardTitle className="text-sm font-medium">Reminder Timing</CardTitle>

@@ -4,13 +4,54 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, MapPin, User, Phone, Mail, Calendar, Clock, AlertCircle, Download, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export interface TrialContactPerson {
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+}
+
+export interface TrialInfo {
+  title: string;
+  protocolId: string;
+  sponsor: string;
+  // Optional staff/summary fields (shown in Overview when present)
+  phase?: string;
+  disease?: string;
+  drug?: string;
+  site?: string;
+  pi?: string;
+  department?: string;
+  status?: string;
+  purpose: string;
+  summary: string;
+  duration: string;
+  totalVisits: number;
+  visitSchedule: { visit: string; timepoint: string; type: string }[];
+  responsibilities: string[];
+  medication: { name: string; description: string; instructions: string[] };
+  risks: { risk: string; frequency: string }[];
+  benefits: string[];
+  contacts: {
+    pi: TrialContactPerson;
+    coordinator: TrialContactPerson;
+    site: { name: string; address: string; phone: string };
+    emergency: { phone: string; available: string };
+  };
+  withdrawal: string;
+}
+
 interface AboutTrialScreenProps {
   onBack?: () => void;
+  /** Trial to display. Defaults to the patient's enrolled trial. */
+  info?: TrialInfo;
+  /** Header title. Defaults to "About Trial". */
+  title?: string;
 }
 
 type Section = "overview" | "purpose" | "schedule" | "responsibilities" | "medication" | "risks" | "benefits" | "contacts" | "withdrawal";
 
-const trialInfo = {
+const defaultTrialInfo: TrialInfo = {
   title: "Phase III Study of Novel Cancer Treatment in Non-Small Cell Lung Cancer",
   protocolId: "ONCO-2024-001",
   sponsor: "PharmaCo Research Inc.",
@@ -106,8 +147,9 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "withdrawal", label: "Withdrawal Info", icon: <FileText className="h-4 w-4" /> },
 ];
 
-export function AboutTrialScreen({ onBack }: AboutTrialScreenProps) {
+export function AboutTrialScreen({ onBack, info = defaultTrialInfo, title = "About Trial" }: AboutTrialScreenProps) {
   const [activeSection, setActiveSection] = useState<Section>("overview");
+  const trialInfo = info;
 
   const renderContent = () => {
     switch (activeSection) {
@@ -133,6 +175,48 @@ export function AboutTrialScreen({ onBack }: AboutTrialScreenProps) {
                   <span className="text-gray-500">Total Visits</span>
                   <span className="text-gray-900">{trialInfo.totalVisits}</span>
                 </div>
+                {trialInfo.phase && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Phase</span>
+                    <span className="text-gray-900">{trialInfo.phase}</span>
+                  </div>
+                )}
+                {trialInfo.disease && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Disease</span>
+                    <span className="text-gray-900">{trialInfo.disease}</span>
+                  </div>
+                )}
+                {trialInfo.drug && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Drug</span>
+                    <span className="text-gray-900">{trialInfo.drug}</span>
+                  </div>
+                )}
+                {trialInfo.site && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Site</span>
+                    <span className="text-gray-900">{trialInfo.site}</span>
+                  </div>
+                )}
+                {trialInfo.pi && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Principal Investigator</span>
+                    <span className="text-gray-900">{trialInfo.pi}</span>
+                  </div>
+                )}
+                {trialInfo.department && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Department</span>
+                    <span className="text-gray-900">{trialInfo.department}</span>
+                  </div>
+                )}
+                {trialInfo.status && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className="font-medium text-emerald-600">{trialInfo.status}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -387,7 +471,7 @@ export function AboutTrialScreen({ onBack }: AboutTrialScreenProps) {
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
-          <h1 className="text-lg font-semibold">About Trial</h1>
+          <h1 className="text-lg font-semibold">{title}</h1>
         </div>
       </div>
 
@@ -427,4 +511,108 @@ export function AboutTrialScreen({ onBack }: AboutTrialScreenProps) {
       </div>
     </div>
   );
+}
+
+/** Shape of a trial row from the PI / Research Team dashboards. */
+export interface TrialSummary {
+  id: string;
+  title: string;
+  phase: string;
+  disease: string;
+  drug: string;
+  sponsor: string;
+  site: string;
+  pi: string;
+  department: string;
+  status: string;
+}
+
+/**
+ * Build the rich About-Trial content from a dashboard trial summary so the PI
+ * and Research Team can open the same detailed page patients see.
+ */
+export function buildTrialInfo(tr: TrialSummary): TrialInfo {
+  return {
+    title: tr.title,
+    protocolId: tr.id,
+    sponsor: tr.sponsor,
+    phase: tr.phase,
+    disease: tr.disease,
+    drug: tr.drug,
+    site: tr.site,
+    pi: tr.pi,
+    department: tr.department,
+    status: tr.status,
+    purpose: `This ${tr.phase} study evaluates the safety and effectiveness of ${tr.drug} in patients with ${tr.disease}. The trial aims to determine whether this treatment improves outcomes compared to standard care.`,
+    summary: `${tr.title} (${tr.id}) is a ${tr.phase} clinical trial sponsored by ${tr.sponsor}, conducted at ${tr.site} under the supervision of ${tr.pi}, ${tr.department}. The study evaluates ${tr.drug} for the treatment of ${tr.disease}.`,
+    duration: "12 months (approximately 52 weeks)",
+    totalVisits: 8,
+    visitSchedule: [
+      { visit: "Screening", timepoint: "Week -2 to 0", type: "Hospital" },
+      { visit: "Baseline", timepoint: "Week 0", type: "Hospital" },
+      { visit: "Visit 1", timepoint: "Week 4", type: "Hospital" },
+      { visit: "Visit 2", timepoint: "Week 8", type: "Telephonic" },
+      { visit: "Visit 3", timepoint: "Week 12", type: "Hospital" },
+      { visit: "Visit 4", timepoint: "Week 24", type: "Hospital" },
+      { visit: "Visit 5", timepoint: "Week 36", type: "Telephonic" },
+      { visit: "End of Study", timepoint: "Week 52", type: "Hospital" },
+    ],
+    responsibilities: [
+      "Ensure all visits are conducted within the protocol window",
+      "Confirm informed consent is documented before any procedure",
+      "Record visit data and adverse events in the eCRF promptly",
+      "Maintain source documents and study drug accountability",
+      "Report protocol deviations and SAEs to the sponsor",
+      "Follow GCP and the approved protocol at all times",
+    ],
+    medication: {
+      name: tr.drug,
+      description: `${tr.drug} is the investigational product under study for ${tr.disease}. Dispense and administer strictly per the protocol dosing schedule.`,
+      instructions: [
+        "Dispense only to randomized, eligible participants",
+        "Follow the protocol-specified dose and titration",
+        "Counsel the patient to take with food to reduce GI upset",
+        "Record each dispensation in the drug accountability log",
+        "Store as per the product label and temperature log",
+      ],
+    },
+    risks: [
+      { risk: "Gastrointestinal upset", frequency: "Common (>10%)" },
+      { risk: "Headache", frequency: "Common (>10%)" },
+      { risk: "Dizziness", frequency: "Uncommon (1-10%)" },
+      { risk: "Hypoglycaemia", frequency: "Uncommon (1-10%)" },
+      { risk: "Allergic reaction", frequency: "Rare (<1%)" },
+    ],
+    benefits: [
+      "Access to a potentially effective new treatment",
+      "Close medical monitoring throughout the study",
+      "Regular health assessments at no cost",
+      "Contribution to advancing care for future patients",
+    ],
+    contacts: {
+      pi: {
+        name: tr.pi,
+        role: "Principal Investigator",
+        phone: "+91 98765 43210",
+        email: "pi@apollochennai.com",
+      },
+      coordinator: {
+        name: "Meera",
+        role: "Clinical Research Coordinator",
+        phone: "+91 98765 11223",
+        email: "crc@apollochennai.com",
+      },
+      site: {
+        name: tr.site,
+        address: "Apollo Hospital, Greams Road, Chennai, Tamil Nadu 600006",
+        phone: "+91 44 2829 3333",
+      },
+      emergency: {
+        phone: "1800-CTMS-ER",
+        available: "24/7",
+      },
+    },
+    withdrawal:
+      "Participation is voluntary. A participant may withdraw at any time, for any reason, without penalty. On withdrawal, ensure end-of-study procedures and appropriate follow-up care are arranged, and document the withdrawal in the eCRF.",
+  };
 }

@@ -561,8 +561,8 @@ export function MyTrialScreen({ onNavigate }: MyTrialScreenProps) {
         onTabChange={(tab) => {
           setActiveTab(tab)
           if (tab === "dashboard") onNavigate("patient-dashboard")
+          if (tab === "chat") onNavigate("chat")
           if (tab === "calendar") onNavigate("patient-calendar")
-          if (tab === "notifs") onNavigate("notifications")
           if (tab === "me") onNavigate("profile-settings")
         }}
       />

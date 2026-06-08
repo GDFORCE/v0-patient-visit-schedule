@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -20,12 +22,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowLeft,
   Search,
-  Filter,
   MoreVertical,
   UserCheck,
   UserX,
+  UserPlus,
   Key,
   Shield,
   Eye,
@@ -34,6 +35,7 @@ import {
   Building2,
   Calendar,
   Clock,
+  Download,
 } from "lucide-react";
 
 interface UserManagementScreenProps {
@@ -41,7 +43,30 @@ interface UserManagementScreenProps {
   initialFilter?: string;
 }
 
-const users = [
+interface LockInfo {
+  lockedAt: string;
+  failedAttempts: number;
+  lastIp: string;
+  device: string;
+  repeatedIp: boolean;
+}
+
+interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  photo: string | null;
+  organization: string;
+  orgType: string;
+  role: string;
+  registrationDate: string;
+  lastLogin: string;
+  status: string;
+  lockInfo?: LockInfo;
+}
+
+const users: UserRecord[] = [
   {
     id: "USR-001",
     name: "Dr. Sarah Johnson",
@@ -107,6 +132,26 @@ const users = [
     lastLogin: "Never",
     status: "Suspended",
   },
+  {
+    id: "USR-006",
+    name: "Mark Johnson",
+    email: "mark.j@trialpharma.com",
+    phone: "+1 555-0654",
+    photo: null,
+    organization: "TrialPharma",
+    orgType: "Sponsor",
+    role: "Sponsor Representative",
+    registrationDate: "2024-02-18",
+    lastLogin: "2024-06-05 12:04 PM",
+    status: "Locked",
+    lockInfo: {
+      lockedAt: "05-Jun-2026 12:04 IST",
+      failedAttempts: 5,
+      lastIp: "192.168.4.21",
+      device: "Chrome · Windows 11",
+      repeatedIp: true,
+    },
+  },
 ];
 
 export function UserManagementScreen({ onBack, initialFilter }: UserManagementScreenProps) {
@@ -114,9 +159,89 @@ export function UserManagementScreen({ onBack, initialFilter }: UserManagementSc
   const [orgTypeFilter, setOrgTypeFilter] = useState(initialFilter || "all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [userList, setUserList] = useState(users);
   const [selectedUser, setSelectedUser] = useState<typeof users[0] | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const emptyForm = { name: "", email: "", phone: "", entity: "Sponsor", designation: "", org: "", sendInvite: true };
+  const [form, setForm] = useState(emptyForm);
 
-  const filteredUsers = users.filter((user) => {
+  const canAdd = form.name.trim() && /\S+@\S+\.\S+/.test(form.email);
+  const handleAddUser = () => {
+    if (!canAdd) {
+      toast.error("Valid name and email are required");
+      return;
+    }
+    setUserList((prev) => [
+      {
+        id: `USR-${String(prev.length + 1).padStart(3, "0")}`,
+        name: form.name,
+        email: form.email,
+        phone: form.phone || "—",
+        photo: null,
+        organization: form.org || "—",
+        orgType: form.entity,
+        role: form.designation || "—",
+        registrationDate: new Date().toISOString().slice(0, 10),
+        lastLogin: "Never",
+        status: "Pending Verification",
+      },
+      ...prev,
+    ]);
+    toast.success(`${form.name} added${form.sendInvite ? " · invite sent" : ""}`);
+    setForm(emptyForm);
+    setAddOpen(false);
+  };
+
+  // ── ADM-02-F4 Unlock Account workflow ────────────────────────────
+  const [unlockUser, setUnlockUser] = useState<UserRecord | null>(null);
+  const [checks, setChecks] = useState({ email: false, orgId: false, ticket: false });
+  const [unlockReason, setUnlockReason] = useState("");
+  const [forceReset, setForceReset] = useState(true);
+  const checkedCount = [checks.email, checks.orgId, checks.ticket].filter(Boolean).length;
+  const canUnlock = checkedCount >= 2 && unlockReason.trim().length >= 10;
+
+  const openUnlock = (u: UserRecord) => {
+    setUnlockUser(u);
+    setChecks({ email: false, orgId: false, ticket: false });
+    setUnlockReason("");
+    setForceReset(true);
+  };
+
+  const handleConfirmUnlock = () => {
+    if (!unlockUser || !canUnlock) return;
+    changeStatus(unlockUser.id, "Active");
+    toast.success(`${unlockUser.name} unlocked${forceReset ? " · password reset required" : ""}`);
+    setUnlockUser(null);
+    setSelectedUser(null);
+  };
+
+  // ── ADM-02 Section 2 summary tiles ───────────────────────────────
+  const tiles = [
+    { label: "Total users", value: userList.length },
+    { label: "Sponsors", value: userList.filter((u) => u.orgType === "Sponsor").length },
+    { label: "CROs", value: userList.filter((u) => u.orgType === "CRO").length },
+    { label: "PIs", value: userList.filter((u) => u.role.includes("Investigator")).length },
+    { label: "Research Team", value: userList.filter((u) => u.role.includes("Coordinator") || u.role.includes("Research")).length },
+    { label: "Locked", value: userList.filter((u) => u.status === "Locked").length },
+  ];
+
+  const changeStatus = (id: string, status: string) => {
+    setUserList((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+    setSelectedUser((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
+  };
+
+  const resetPasswordFor = (u: UserRecord) => toast.success(`Password reset link sent to ${u.email}`);
+  const suspendUser = (u: UserRecord) => {
+    changeStatus(u.id, "Suspended");
+    toast.success(`${u.name} suspended`);
+  };
+  const activateUser = (u: UserRecord) => {
+    changeStatus(u.id, "Active");
+    toast.success(`${u.name} activated`);
+  };
+  const forceLogout = (u: UserRecord) => toast.success(`${u.name} signed out of all sessions`);
+
+  const filteredUsers = userList.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,49 +259,61 @@ export function UserManagementScreen({ onBack, initialFilter }: UserManagementSc
         return "bg-amber-100 text-amber-700";
       case "Suspended":
         return "bg-red-100 text-red-700";
+      case "Locked":
+        return "bg-orange-100 text-orange-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-[#1A3872]">All registered users</h1>
+          <p className="text-sm text-gray-500">
+            Manage accounts, roles, status and entity assignments. Patient records are pseudonymized.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => toast.success("Filtered user list exported (CSV)")}>
+            <Download className="h-4 w-4 mr-2" /> Export
           </Button>
-          <div>
-            <h1 className="text-lg font-semibold">User Management</h1>
-            <p className="text-xs text-blue-200">{users.length} total users</p>
-          </div>
+          <Button className="bg-[#1A3872] hover:bg-[#15305f]" onClick={() => setAddOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" /> Add user
+          </Button>
         </div>
       </div>
 
+      {/* Summary tiles (ADM-02 Section 2) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="text-2xl font-bold text-[#1A3872] leading-none">{t.value}</div>
+            <div className="text-xs text-gray-500 mt-2">{t.label}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Search & Filters */}
-      <div className="p-3 bg-white border-b space-y-2">
-        <div className="relative">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by name, email, or organization..."
+            placeholder="Search by name, email, phone, or organization..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-10"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2">
           <Select value={orgTypeFilter} onValueChange={setOrgTypeFilter}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
-              <SelectValue placeholder="Org Type" />
+            <SelectTrigger className="w-[150px] h-10 text-sm">
+              <SelectValue placeholder="Entity type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">All entities</SelectItem>
               <SelectItem value="Sponsor">Sponsor</SelectItem>
               <SelectItem value="CRO">CRO</SelectItem>
               <SelectItem value="SMO">SMO</SelectItem>
@@ -185,107 +322,122 @@ export function UserManagementScreen({ onBack, initialFilter }: UserManagementSc
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-[150px] h-10 text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All status</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Pending Verification">Pending</SelectItem>
               <SelectItem value="Suspended">Suspended</SelectItem>
+              <SelectItem value="Locked">Locked</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* User List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {filteredUsers.map((user) => (
-          <Card key={user.id} className="border-0 shadow-sm">
-            <CardContent className="p-3">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.photo || undefined} />
-                  <AvatarFallback className="bg-[#DBEAFE] text-[#1A3872] text-sm">
-                    {user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-medium text-sm">{user.name}</h3>
-                      <p className="text-xs text-gray-500">{user.role}</p>
+      {/* User table (ADM-02 Section 4) */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 font-medium">User</th>
+                <th className="px-4 py-3 font-medium">Email / contact</th>
+                <th className="px-4 py-3 font-medium">Entity</th>
+                <th className="px-4 py-3 font-medium">Organization</th>
+                <th className="px-4 py-3 font-medium">Registered</th>
+                <th className="px-4 py-3 font-medium">Last login</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50/70">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user.photo || undefined} />
+                        <AvatarFallback className="bg-[#DBEAFE] text-[#1A3872] text-xs">
+                          {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{user.name}</div>
+                        <div className="text-xs text-gray-500 truncate">{user.role}</div>
+                      </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline" className="text-xs">{user.orgType}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {user.orgType === "Patient" ? <span className="text-gray-400">—</span> : user.organization}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">{user.registrationDate}</td>
+                  <td className="px-4 py-3 text-gray-500">{user.lastLogin}</td>
+                  <td className="px-4 py-3">
+                    <Badge className={`text-xs ${getStatusColor(user.status)}`}>{user.status}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedUser(user)} title="View">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {user.status === "Locked" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-orange-300 text-orange-700 hover:bg-orange-50"
+                          onClick={() => openUnlock(user)}
+                        >
+                          <Key className="h-3.5 w-3.5 mr-1" /> Unlock
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedUser(user)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        {user.status === "Active" ? (
-                          <DropdownMenuItem className="text-red-600">
-                            <UserX className="h-4 w-4 mr-2" />
-                            Suspend User
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedUser(user)}>
+                            <Eye className="h-4 w-4 mr-2" /> View details
                           </DropdownMenuItem>
-                        ) : user.status === "Suspended" ? (
-                          <DropdownMenuItem className="text-green-600">
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Activate User
+                          {user.status === "Active" ? (
+                            <DropdownMenuItem className="text-red-600" onClick={() => suspendUser(user)}>
+                              <UserX className="h-4 w-4 mr-2" /> Suspend user
+                            </DropdownMenuItem>
+                          ) : user.status === "Suspended" ? (
+                            <DropdownMenuItem className="text-green-600" onClick={() => activateUser(user)}>
+                              <UserCheck className="h-4 w-4 mr-2" /> Activate user
+                            </DropdownMenuItem>
+                          ) : null}
+                          <DropdownMenuItem onClick={() => resetPasswordFor(user)}>
+                            <Key className="h-4 w-4 mr-2" /> Reset password
                           </DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuItem>
-                          <Key className="h-4 w-4 mr-2" />
-                          Reset Password
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Shield className="h-4 w-4 mr-2" />
-                          Force Logout
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Building2 className="h-3 w-3" />
-                      <span className="truncate">{user.organization}</span>
-                      <Badge variant="outline" className="text-xs px-1.5 py-0">
-                        {user.orgType}
-                      </Badge>
+                          <DropdownMenuItem onClick={() => forceLogout(user)}>
+                            <Shield className="h-4 w-4 mr-2" /> Force logout
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <Badge className={`text-xs ${getStatusColor(user.status)}`}>
-                      {user.status}
-                    </Badge>
-                    <span className="text-xs text-gray-400">
-                      Last login: {user.lastLogin}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredUsers.length === 0 && (
+          <p className="text-center text-sm text-gray-400 py-10">No users match the current filters.</p>
+        )}
       </div>
 
       {/* User Detail Sheet */}
       <Sheet open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-xl">
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle>User Details</SheetTitle>
           </SheetHeader>
@@ -351,18 +503,28 @@ export function UserManagementScreen({ onBack, initialFilter }: UserManagementSc
                 </div>
               </div>
 
+              {selectedUser.status === "Locked" && (
+                <Button
+                  className="w-full mt-4 bg-orange-600 hover:bg-orange-700"
+                  onClick={() => openUnlock(selectedUser)}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Unlock account
+                </Button>
+              )}
+
               <div className="grid grid-cols-2 gap-2 pt-4">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => resetPasswordFor(selectedUser)}>
                   <Key className="h-4 w-4 mr-2" />
                   Reset Password
                 </Button>
                 {selectedUser.status === "Active" ? (
-                  <Button variant="destructive" className="w-full">
+                  <Button variant="destructive" className="w-full" onClick={() => suspendUser(selectedUser)}>
                     <UserX className="h-4 w-4 mr-2" />
                     Suspend
                   </Button>
                 ) : (
-                  <Button className="w-full bg-green-600 hover:bg-green-700">
+                  <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => activateUser(selectedUser)}>
                     <UserCheck className="h-4 w-4 mr-2" />
                     Activate
                   </Button>
@@ -372,6 +534,135 @@ export function UserManagementScreen({ onBack, initialFilter }: UserManagementSc
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Add User form overlay (ADM-02-F1) */}
+      <Sheet open={addOpen} onOpenChange={setAddOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Add user</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3">
+            <Field label="Full name">
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </Field>
+            <Field label="Email ID">
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+            <Field label="Phone number">
+              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91-XXXXXXXXXX" />
+            </Field>
+            <Field label="Entity type">
+              <Select value={form.entity} onValueChange={(v) => setForm({ ...form, entity: v })}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sponsor">Sponsor</SelectItem>
+                  <SelectItem value="CRO">CRO</SelectItem>
+                  <SelectItem value="SMO">SMO</SelectItem>
+                  <SelectItem value="Site">Site</SelectItem>
+                  <SelectItem value="Patient">Patient</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Designation">
+              <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} />
+            </Field>
+            <Field label="Organization name">
+              <Input value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} placeholder="Join existing or create new" />
+            </Field>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={form.sendInvite} onCheckedChange={(v) => setForm({ ...form, sendInvite: !!v })} />
+              Send onboarding invitation
+            </label>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="flex-1 bg-[#1A3872]" disabled={!canAdd} onClick={handleAddUser}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Unlock Account workflow (ADM-02-F4) */}
+      <Sheet open={!!unlockUser} onOpenChange={(o) => !o && setUnlockUser(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Unlock account</SheetTitle>
+          </SheetHeader>
+          {unlockUser && (
+            <div className="mt-4 space-y-3">
+              <div className="rounded-lg bg-gray-50 p-3 space-y-1 text-xs">
+                <p className="text-sm font-semibold text-[#1A3872]">{unlockUser.name}</p>
+                <p className="text-gray-500">Locked at: {unlockUser.lockInfo?.lockedAt}</p>
+                <p className="text-gray-500">
+                  Failed attempts: {unlockUser.lockInfo?.failedAttempts} of 5
+                </p>
+                <p className="text-gray-500">Last IP: {unlockUser.lockInfo?.lastIp}</p>
+                <p className="text-gray-500">Device: {unlockUser.lockInfo?.device}</p>
+                {unlockUser.lockInfo?.repeatedIp && (
+                  <p className="text-red-600 font-medium">⚠ Same IP caused multiple lockouts in 24h</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-2">
+                  Identity verification (at least 2 required)
+                </p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={checks.email} onCheckedChange={(v) => setChecks({ ...checks, email: !!v })} />
+                    Verified via registered email
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={checks.orgId} onCheckedChange={(v) => setChecks({ ...checks, orgId: !!v })} />
+                    Verified via organization ID
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={checks.ticket} onCheckedChange={(v) => setChecks({ ...checks, ticket: !!v })} />
+                    Verified via support ticket reference
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-1">
+                  Reason for unlock (min 10 chars, permanently logged)
+                </p>
+                <Textarea value={unlockReason} onChange={(e) => setUnlockReason(e.target.value)} className="min-h-[70px]" />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={forceReset} onCheckedChange={(v) => setForceReset(!!v)} />
+                Force password reset on next login
+              </label>
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setUnlockUser(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={!canUnlock}
+                  onClick={handleConfirmUnlock}
+                >
+                  Confirm unlock
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
+      {children}
     </div>
   );
 }

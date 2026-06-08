@@ -27,18 +27,36 @@ const priyaVisits = [
 function getStatusColor(status: string) {
   switch (status) {
     case "completed": return "teal"
-    case "upcoming": return "amber"
+    case "upcoming": return "orange"
     case "missed": return "red"
     default: return "blue"
   }
 }
 
-function getStatusDotClass(status: string) {
+// Dominant status for a day → drives the colour of the date cell.
+function getDayStatus(visits: { status: string }[]): string | null {
+  if (visits.length === 0) return null
+  if (visits.some(v => v.status === "missed")) return "missed"
+  if (visits.some(v => v.status === "upcoming")) return "upcoming"
+  if (visits.some(v => v.status === "scheduled")) return "scheduled"
+  return "completed"
+}
+
+function getDayBgClass(status: string) {
   switch (status) {
-    case "completed": return "bg-[#0D9488]"
-    case "upcoming": return "bg-amber-500"
-    case "missed": return "bg-red-500"
-    default: return "bg-[#2563EB]"
+    case "completed": return "bg-teal-100"
+    case "upcoming": return "bg-orange-100"
+    case "missed": return "bg-red-100"
+    default: return "bg-blue-100"
+  }
+}
+
+function getDayTextClass(status: string) {
+  switch (status) {
+    case "completed": return "text-[#0D9488]"
+    case "upcoming": return "text-orange-600"
+    case "missed": return "text-red-600"
+    default: return "text-[#2563EB]"
   }
 }
 
@@ -56,6 +74,10 @@ function formatMonthYear(date: Date) {
 
 function formatDay(date: Date) {
   return date.toLocaleString("en-US", { weekday: "long", day: "numeric", month: "long" })
+}
+
+function formatHeaderDate(date: Date) {
+  return date.toLocaleString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
 }
 
 export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScreenProps) {
@@ -124,6 +146,16 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
     setWeekStart(d)
     setSelectedWeekDay(d)
   }
+  function prevDay() {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() - 1)
+    setSelectedDate(d)
+  }
+  function nextDay() {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + 1)
+    setSelectedDate(d)
+  }
   const weekLabel = `${weekDays[0].getDate()}–${weekDays[6].getDate()} ${weekDays[6].toLocaleString("en-US", { month: "long", year: "numeric" })}`
 
   return (
@@ -152,11 +184,17 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-          ) : (
+          ) : viewMode === "week" ? (
             <div className="flex items-center gap-2">
               <button onClick={prevWeek}><ChevronLeft className="w-5 h-5" /></button>
               <span className="font-semibold text-sm">📅 {weekLabel}</span>
               <button onClick={nextWeek}><ChevronRight className="w-5 h-5" /></button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={prevDay}><ChevronLeft className="w-5 h-5" /></button>
+              <span className="font-semibold text-sm">📅 {formatHeaderDate(selectedDate)}</span>
+              <button onClick={nextDay}><ChevronRight className="w-5 h-5" /></button>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -185,7 +223,10 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
             {(["day", "week", "month"] as const).map((mode) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
+                onClick={() => {
+                  setViewMode(mode)
+                  if (mode === "day") setSelectedDate(today)
+                }}
                 className={cn(
                   "flex-1 py-2 text-sm font-medium capitalize transition-colors",
                   viewMode === mode
@@ -197,6 +238,13 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Status legend */}
+        <div className="flex justify-center gap-4 py-2 bg-white border-b border-slate-100">
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#0D9488]" /><span className="text-[11px] text-slate-500">Completed</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" /><span className="text-[11px] text-slate-500">Upcoming</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" /><span className="text-[11px] text-slate-500">Scheduled</span></div>
         </div>
 
         {/* MONTH VIEW */}
@@ -213,6 +261,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                   {week.map((day, di) => {
                     const cellDate = day ? new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day) : null
                     const visits = cellDate ? getVisitsForDate(cellDate) : []
+                    const dayStatus = getDayStatus(visits)
                     const isToday = cellDate && cellDate.toDateString() === today.toDateString()
                     const isSelected = cellDate && cellDate.toDateString() === selectedDate.toDateString()
                     return (
@@ -221,20 +270,17 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                         onClick={() => cellDate && setSelectedDate(cellDate)}
                         disabled={!day}
                         className={cn(
-                          "aspect-square flex flex-col items-center justify-center rounded-full relative",
-                          isSelected && "bg-[#0D1B3E] text-white",
-                          isToday && !isSelected && "bg-blue-100",
+                          "aspect-square flex items-center justify-center rounded-full",
+                          isSelected && "bg-[#0D1B3E]",
+                          !isSelected && isToday && "ring-1 ring-inset ring-[#2563EB]",
+                          !isSelected && !isToday && dayStatus && getDayBgClass(dayStatus),
                           !day && "invisible"
                         )}
                       >
-                        <span className={cn("text-sm font-medium", isSelected ? "text-white" : "text-slate-800")}>{day}</span>
-                        {visits.length > 0 && (
-                          <div className="flex gap-0.5 mt-0.5">
-                            {visits.slice(0, 2).map((v, i) => (
-                              <div key={i} className={cn("w-1 h-1 rounded-full", getStatusDotClass(v.status))} />
-                            ))}
-                          </div>
-                        )}
+                        <span className={cn(
+                          "text-sm font-medium",
+                          isSelected ? "text-white" : dayStatus ? getDayTextClass(dayStatus) : "text-slate-800"
+                        )}>{day}</span>
                       </button>
                     )
                   })}
@@ -260,7 +306,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                         className={cn(
                           "bg-white rounded-xl p-4 border-l-4 shadow-sm",
                           color === "teal" && "border-[#0D9488]",
-                          color === "amber" && "border-amber-400",
+                          color === "orange" && "border-orange-500",
                           color === "red" && "border-red-500",
                           color === "blue" && "border-[#2563EB]"
                         )}
@@ -270,7 +316,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-xs font-semibold",
                             color === "teal" && "bg-teal-100 text-[#0D9488]",
-                            color === "amber" && "bg-amber-100 text-amber-700",
+                            color === "orange" && "bg-orange-100 text-orange-600",
                             color === "red" && "bg-red-100 text-red-600",
                             color === "blue" && "bg-blue-100 text-[#2563EB]"
                           )}>
@@ -319,6 +365,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
               <div className="grid grid-cols-7 gap-1">
                 {weekDays.map((d, i) => {
                   const dayVisits = getVisitsForDate(d)
+                  const dayStatus = getDayStatus(dayVisits)
                   const isToday = d.toDateString() === today.toDateString()
                   const isSelected = d.toDateString() === selectedWeekDay.toDateString()
                   return (
@@ -331,15 +378,12 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                       <div className={cn(
                         "w-8 h-8 flex items-center justify-center rounded-full",
                         isSelected && "bg-[#0D1B3E] text-white",
-                        isToday && !isSelected && "bg-blue-100 text-[#0D1B3E]",
-                        !isSelected && !isToday && "text-slate-800"
+                        !isSelected && isToday && "ring-1 ring-inset ring-[#2563EB]",
+                        !isSelected && dayStatus && cn(getDayBgClass(dayStatus), getDayTextClass(dayStatus)),
+                        !isSelected && !dayStatus && "text-slate-800"
                       )}>
                         <span className="text-sm font-semibold">{d.getDate()}</span>
                       </div>
-                      {dayVisits.length > 0 && (
-                        <div className={cn("w-1.5 h-1.5 rounded-full", getStatusDotClass(dayVisits[0].status))} />
-                      )}
-                      {dayVisits.length === 0 && <div className="w-1.5 h-1.5" />}
                     </button>
                   )
                 })}
@@ -371,7 +415,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                         className={cn(
                           "bg-white rounded-xl p-4 border-l-4 shadow-sm",
                           color === "teal" && "border-[#0D9488]",
-                          color === "amber" && "border-amber-400",
+                          color === "orange" && "border-orange-500",
                           color === "blue" && "border-[#2563EB]"
                         )}
                       >
@@ -380,7 +424,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-xs font-semibold",
                             color === "teal" && "bg-teal-100 text-[#0D9488]",
-                            color === "amber" && "bg-amber-100 text-amber-700",
+                            color === "orange" && "bg-orange-100 text-orange-600",
                             color === "blue" && "bg-blue-100 text-[#2563EB]"
                           )}>
                             {v.status === "completed" ? "Completed ✓" : v.status === "upcoming" ? "Upcoming" : "Scheduled"}
@@ -419,7 +463,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                       className={cn(
                         "bg-white rounded-xl p-4 border-l-4 shadow-sm",
                         color === "teal" && "border-[#0D9488]",
-                        color === "amber" && "border-amber-400",
+                        color === "orange" && "border-amber-400",
                         color === "blue" && "border-[#2563EB]"
                       )}
                     >
@@ -428,7 +472,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
                         <span className={cn(
                           "px-2 py-0.5 rounded-full text-xs font-semibold",
                           color === "teal" && "bg-teal-100 text-[#0D9488]",
-                          color === "amber" && "bg-amber-100 text-amber-700",
+                          color === "orange" && "bg-orange-100 text-orange-600",
                           color === "blue" && "bg-blue-100 text-[#2563EB]"
                         )}>
                           {v.status === "completed" ? "Completed ✓" : v.status === "upcoming" ? "Upcoming" : "Scheduled"}
@@ -453,7 +497,7 @@ export function PatientCalendarScreen({ onNavigate, onBack }: PatientCalendarScr
           setActiveTab(tab)
           if (tab === "dashboard") onNavigate("patient-dashboard")
           if (tab === "my-trial") onNavigate("my-trial")
-          if (tab === "notifs") onNavigate("notifications")
+          if (tab === "chat") onNavigate("chat")
           if (tab === "me") onNavigate("profile-settings")
         }}
       />

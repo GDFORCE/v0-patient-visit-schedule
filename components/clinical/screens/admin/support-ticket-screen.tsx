@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,118 +152,120 @@ export function SupportTicketScreen({ onBack }: SupportTicketScreenProps) {
   const openCount = tickets.filter((t) => t.status === "Open").length;
   const inProgressCount = tickets.filter((t) => t.status === "In Progress").length;
 
+  const resolvedCount = tickets.filter((t) => t.status === "Resolved").length;
+  const tiles = [
+    { label: "Open", value: openCount, accent: "text-red-600" },
+    { label: "In progress", value: inProgressCount, accent: "text-amber-600" },
+    { label: "Resolved this week", value: resolvedCount, accent: "text-green-600" },
+    { label: "Total this month", value: tickets.length, accent: "text-[#1A3872]" },
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Support Tickets</h1>
-            <p className="text-xs text-blue-200">
-              {openCount} open, {inProgressCount} in progress
-            </p>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">Issue tracker</h1>
+        <p className="text-sm text-gray-500">Receive, track, action and close all user-reported issues.</p>
+      </div>
+
+      {/* Summary tiles (ADM-10 Section 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className={`text-2xl font-bold leading-none ${t.accent}`}>{t.value}</div>
+            <div className="text-xs text-gray-500 mt-2">{t.label}</div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Quick Stats */}
-      <div className="p-3 bg-white border-b flex gap-2">
-        <Badge
-          variant="outline"
-          className={`cursor-pointer ${
-            statusFilter === "Open" ? "bg-red-50 border-red-500" : ""
-          }`}
-          onClick={() => setStatusFilter(statusFilter === "Open" ? "all" : "Open")}
-        >
-          <AlertCircle className="h-3 w-3 mr-1 text-red-500" />
-          Open ({openCount})
-        </Badge>
-        <Badge
-          variant="outline"
-          className={`cursor-pointer ${
-            statusFilter === "In Progress" ? "bg-amber-50 border-amber-500" : ""
-          }`}
-          onClick={() => setStatusFilter(statusFilter === "In Progress" ? "all" : "In Progress")}
-        >
-          <Clock className="h-3 w-3 mr-1 text-amber-500" />
-          In Progress ({inProgressCount})
-        </Badge>
-        <Badge
-          variant="outline"
-          className={`cursor-pointer ${
-            statusFilter === "Resolved" ? "bg-green-50 border-green-500" : ""
-          }`}
-          onClick={() => setStatusFilter(statusFilter === "Resolved" ? "all" : "Resolved")}
-        >
-          <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-          Resolved
-        </Badge>
-      </div>
-
-      {/* Search */}
-      <div className="p-3 bg-white border-b">
-        <div className="relative">
+      {/* Filter bar */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search tickets..."
+            placeholder="Search by ticket ID, user, or subject..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-10"
           />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Badge
+            variant="outline"
+            className={`cursor-pointer h-9 px-3 ${statusFilter === "Open" ? "bg-red-50 border-red-500" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "Open" ? "all" : "Open")}
+          >
+            <AlertCircle className="h-3 w-3 mr-1 text-red-500" /> Open ({openCount})
+          </Badge>
+          <Badge
+            variant="outline"
+            className={`cursor-pointer h-9 px-3 ${statusFilter === "In Progress" ? "bg-amber-50 border-amber-500" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "In Progress" ? "all" : "In Progress")}
+          >
+            <Clock className="h-3 w-3 mr-1 text-amber-500" /> In progress ({inProgressCount})
+          </Badge>
+          <Badge
+            variant="outline"
+            className={`cursor-pointer h-9 px-3 ${statusFilter === "Resolved" ? "bg-green-50 border-green-500" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "Resolved" ? "all" : "Resolved")}
+          >
+            <CheckCircle className="h-3 w-3 mr-1 text-green-500" /> Resolved
+          </Badge>
         </div>
       </div>
 
-      {/* Ticket List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {filteredTickets.map((ticket) => (
-          <Card
-            key={ticket.id}
-            className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => setSelectedTicket(ticket)}
-          >
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Badge className={`text-xs ${getStatusColor(ticket.status)}`}>
-                    {ticket.status}
-                  </Badge>
-                  <Badge variant="outline" className={`text-xs ${getPriorityColor(ticket.priority)}`}>
-                    {ticket.priority}
-                  </Badge>
-                </div>
-                <span className="text-xs text-gray-400">{ticket.id}</span>
-              </div>
-              <h3 className="font-medium text-sm mb-1">{ticket.subject}</h3>
-              <p className="text-xs text-gray-500 truncate mb-2">{ticket.description}</p>
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  <span>{ticket.user}</span>
-                  <Badge variant="outline" className="text-xs px-1 py-0 ml-1">
-                    {ticket.userType}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>{ticket.createdAt}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Ticket tracker table (ADM-10 Section 3) */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 font-medium">Ticket</th>
+                <th className="px-4 py-3 font-medium">Reported by</th>
+                <th className="px-4 py-3 font-medium">Priority</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Raised</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredTickets.map((ticket) => (
+                <tr key={ticket.id} className="hover:bg-gray-50/70">
+                  <td className="px-4 py-3 max-w-[300px]">
+                    <div className="font-medium text-gray-900">{ticket.subject}</div>
+                    <div className="text-xs text-gray-500 truncate">{ticket.id} · {ticket.category}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3 text-gray-400" /> {ticket.user}
+                    </div>
+                    <Badge variant="outline" className="text-[10px] mt-0.5">{ticket.userType}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline" className={`text-xs ${getPriorityColor(ticket.priority)}`}>{ticket.priority}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge className={`text-xs ${getStatusColor(ticket.status)}`}>{ticket.status}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">{ticket.createdAt}</td>
+                  <td className="px-4 py-3 text-right">
+                    <Button variant="outline" size="sm" className="h-8" onClick={() => setSelectedTicket(ticket)}>
+                      View
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredTickets.length === 0 && (
+          <p className="text-center text-sm text-gray-400 py-10">No tickets match the current filters.</p>
+        )}
       </div>
 
       {/* Ticket Detail Sheet */}
       <Sheet open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl">
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
               <span>Ticket Details</span>
@@ -343,7 +346,14 @@ export function SupportTicketScreen({ onBack }: SupportTicketScreenProps) {
                         <SelectItem value="Closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button className="flex-1 bg-[#1A3872]">
+                    <Button
+                      className="flex-1 bg-[#1A3872]"
+                      disabled={!replyText.trim()}
+                      onClick={() => {
+                        toast.success(`Response sent for ${selectedTicket.id}`);
+                        setReplyText("");
+                      }}
+                    >
                       <Send className="h-4 w-4 mr-2" />
                       Send Response
                     </Button>

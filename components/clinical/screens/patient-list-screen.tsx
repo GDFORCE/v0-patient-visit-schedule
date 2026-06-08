@@ -101,7 +101,7 @@ export function PatientListScreen({ onNavigate, onBack }: PatientListScreenProps
       <BottomNav activeTab={activeTab} onTabChange={(tab) => {
         setActiveTab(tab)
         if (tab === "dashboard") onNavigate("sponsor-dashboard")
-        if (tab === "calendar") onNavigate("calendar")
+        if (tab === "calendar") onNavigate("pi-calendar")
         if (tab === "notifs") onNavigate("notifications")
       }} />
     </div>

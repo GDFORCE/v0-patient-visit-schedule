@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,29 +78,17 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
   const [exportFormat, setExportFormat] = useState("excel");
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Reports</h1>
-            <p className="text-xs text-blue-200">Generate and export reports</p>
-          </div>
-        </div>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">Reports</h1>
+        <p className="text-sm text-gray-500">Generate and export platform reports.</p>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="space-y-6">
         {/* Quick Filters */}
-        <Card className="border-0 shadow-sm">
+        <Card className="border border-gray-200 shadow-sm">
           <CardHeader className="pb-2 pt-3 px-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Filter className="h-4 w-4" />
@@ -152,10 +141,11 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
         {/* Report Types */}
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-500 px-1">Available Reports</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {reportTypes.map((report) => (
             <Card
               key={report.id}
-              className={`border-0 shadow-sm cursor-pointer transition-all ${
+              className={`border border-gray-200 shadow-sm cursor-pointer transition-all ${
                 selectedReport === report.id
                   ? "ring-2 ring-[#2563EB] bg-blue-50"
                   : "hover:shadow-md"
@@ -194,10 +184,11 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
 
         {/* Recently Generated */}
-        <Card className="border-0 shadow-sm">
+        <Card className="border border-gray-200 shadow-sm">
           <CardHeader className="pb-2 pt-3 px-3">
             <CardTitle className="text-sm font-medium">Recently Generated</CardTitle>
           </CardHeader>
@@ -222,27 +213,36 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
                     <p className="text-xs text-gray-400">{report.date}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="h-7">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => toast.success(`Downloading ${report.name}`)}
+                >
                   <Download className="h-3 w-3" />
                 </Button>
               </div>
             ))}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Generate Button */}
-      <div className="p-3 bg-white border-t">
-        <Button
-          className="w-full bg-[#1A3872]"
-          disabled={!selectedReport}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Generate{" "}
-          {selectedReport
-            ? reportTypes.find((r) => r.id === selectedReport)?.name
-            : "Report"}
-        </Button>
+        {/* Generate Button */}
+        <div className="flex justify-end">
+          <Button
+            className="bg-[#1A3872] hover:bg-[#15305f]"
+            disabled={!selectedReport}
+            onClick={() => {
+              const name = reportTypes.find((r) => r.id === selectedReport)?.name;
+              toast.success(`Generating ${name} (${exportFormat === "pdf" ? "PDF" : "Excel"})`);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Generate{" "}
+            {selectedReport
+              ? reportTypes.find((r) => r.id === selectedReport)?.name
+              : "Report"}
+          </Button>
+        </div>
       </div>
     </div>
   );

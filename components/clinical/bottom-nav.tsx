@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard, MessageCircle, ClipboardList } from "lucide-react"
+import { Home, Users, Calendar, Bell, User, FlaskConical, MapPin, LayoutDashboard, MessageCircle, ClipboardList, ShieldCheck, BarChart3, ScrollText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/i18n"
 
@@ -41,7 +41,7 @@ const piTabs = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "patients", label: "Patients", icon: Users },
   { id: "chat", label: "Messages", icon: MessageCircle },
-  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "me", label: "Me", icon: User },
 ]
 
@@ -49,6 +49,14 @@ const crcTabs = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "patients", label: "Patients", icon: Users },
   { id: "chat", label: "Messages", icon: MessageCircle },
+  { id: "calendar", label: "Calendar", icon: Calendar },
+  { id: "me", label: "Me", icon: User },
+]
+
+const adminTabs = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "audit", label: "Audit", icon: ScrollText },
   { id: "notifs", label: "Notifs", icon: Bell },
   { id: "me", label: "Me", icon: User },
 ]
@@ -57,7 +65,7 @@ const patientTabs2 = [
   { id: "dashboard", label: "Home", icon: Home },
   { id: "my-trial", label: "My Trial", icon: FlaskConical },
   { id: "chat", label: "Messages", icon: MessageCircle },
-  { id: "notifs", label: "Notifs", icon: Bell },
+  { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "me", label: "Me", icon: User },
 ]
 
@@ -79,6 +87,7 @@ export function BottomNav({ activeTab, onTabChange, role = "investigator", notif
     role === "sponsor" ? sponsorTabs :
     role === "pi" ? piTabs :
     role === "crc" ? crcTabs :
+    role === "admin" ? adminTabs :
     investigatorTabs
   
   return (

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import {
   ChevronDown,
   Download,
@@ -14,7 +15,6 @@ import {
   Check,
 } from "lucide-react"
 
-import { AppBar } from "@/components/clinical/app-bar"
 import { StatusBadge, type StatusTone } from "@/components/clinical/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -154,6 +154,7 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
   const [selectedEntry, setSelectedEntry] = useState<any>(null)
   const [showDetailSheet, setShowDetailSheet] = useState(false)
   const [showExportSheet, setShowExportSheet] = useState(false)
+  const [exportFormat, setExportFormat] = useState("CSV")
   const [alertsDismissed, setAlertsDismissed] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -178,29 +179,21 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
   const hasFailures = mockAuditData.sites.some(s => s.failedCount > 0)
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      <AppBar
-        title="Audit Log"
-        subtitle="Today, 19 May 2025"
-        showBack
-        onBack={onBack}
-        rightContent={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setShowExportSheet(true)}
-            aria-label="Export audit log"
-            className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-          >
-            <Download className="h-5 w-5" />
-          </Button>
-        }
-      />
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-[#1A3872]">Platform activity log</h1>
+          <p className="text-sm text-gray-500">Immutable record of who did what, to which record, and when.</p>
+        </div>
+        <Button type="button" className="bg-[#1A3872] hover:bg-[#15305f]" onClick={() => setShowExportSheet(true)}>
+          <Download className="h-4 w-4 mr-2" /> Export
+        </Button>
+      </div>
 
       {/* Filter Bar */}
-      <div className="bg-card border-b border-border px-4 py-3 space-y-2">
-        <div className="flex gap-2">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={dateFilter} onValueChange={setDateFilter}>
             <SelectTrigger size="sm" className="flex-1">
               <SelectValue />
@@ -270,10 +263,10 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-4">
+      <div className="space-y-2">
         {/* Summary Stats */}
-        <div className="px-4 pt-4 pb-2">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="pb-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Total actions", val: mockAuditData.summary.totalActions, tone: "default" as const },
               { label: "Success", val: mockAuditData.summary.success, tone: "success" as const },
@@ -304,7 +297,7 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
 
         {/* Security Alerts */}
         {!alertsDismissed && hasFailures && (
-          <div className="px-4 py-2">
+          <div className="py-2">
             <Card className="bg-warning/5 border-warning/30 shadow-none gap-2 rounded-xl p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -347,7 +340,7 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
         )}
 
         {/* Grouped List */}
-        <div className="px-4 pt-2 space-y-3">
+        <div className="pt-2 space-y-3">
           {mockAuditData.sites.length === 0 ? (
             <Card className="shadow-none rounded-xl py-10 items-center text-center text-sm text-muted-foreground">
               No audit entries match the current filters.
@@ -485,8 +478,8 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
 
       {/* Action Detail Sheet */}
       {showDetailSheet && selectedEntry && (
-        <div className="absolute inset-0 z-50 flex items-end bg-foreground/40">
-          <div className="w-full max-h-[85%] overflow-auto rounded-t-2xl bg-card">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+          <div className="w-full max-w-lg max-h-[85vh] overflow-auto rounded-2xl bg-card">
             <div className="sticky top-0 bg-card pt-3 pb-2 px-5">
               <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-border" />
               <div className="flex items-start justify-between gap-3">
@@ -603,7 +596,13 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
                     "Copy audit ID"
                   )}
                 </Button>
-                <Button type="button" className="flex-1 h-10">
+                <Button
+                  type="button"
+                  className="flex-1 h-10"
+                  onClick={() =>
+                    toast.success(`Audit entry ${selectedEntry?.id ?? ""} exported`)
+                  }
+                >
                   Export entry
                 </Button>
               </div>
@@ -614,8 +613,8 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
 
       {/* Export Sheet */}
       {showExportSheet && (
-        <div className="absolute inset-0 z-50 flex items-end bg-foreground/40">
-          <div className="w-full rounded-t-2xl bg-card p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card p-5 space-y-4">
             <div className="mx-auto h-1 w-12 rounded-full bg-border" />
             <p className="font-heading text-base font-semibold text-foreground">
               Export audit log
@@ -627,7 +626,13 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {["CSV", "PDF"].map(f => (
-                  <Button key={f} type="button" variant="outline" className="h-10">
+                  <Button
+                    key={f}
+                    type="button"
+                    variant={exportFormat === f ? "default" : "outline"}
+                    className="h-10"
+                    onClick={() => setExportFormat(f)}
+                  >
                     {f}
                   </Button>
                 ))}
@@ -656,7 +661,10 @@ export function AuditLogScreen({ onBack }: AuditLogScreenProps) {
               <Button
                 type="button"
                 className="flex-1 h-10"
-                onClick={() => setShowExportSheet(false)}
+                onClick={() => {
+                  setShowExportSheet(false)
+                  toast.success(`Audit log exported as ${exportFormat}`)
+                }}
               >
                 Export now
               </Button>

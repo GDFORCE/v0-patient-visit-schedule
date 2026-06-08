@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -153,43 +154,31 @@ export function InvitationManagementScreen({ onBack }: InvitationManagementScree
   const pendingCount = invitations.filter((i) => i.status === "Sent").length;
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="bg-[#1A3872] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Invitations</h1>
-            <p className="text-xs text-blue-200">{pendingCount} pending invitations</p>
-          </div>
-        </div>
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">User invitations</h1>
+        <p className="text-sm text-gray-500">{pendingCount} pending · track sent, accepted, expired and cancelled invites.</p>
       </div>
 
       {/* Search & Filters */}
-      <div className="p-3 bg-white border-b space-y-2">
-        <div className="relative">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search invitations..."
+            placeholder="Search by name, email, or organization..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-10"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[110px] h-8 text-xs">
+            <SelectTrigger className="w-[140px] h-10 text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All status</SelectItem>
               <SelectItem value="Sent">Sent</SelectItem>
               <SelectItem value="Accepted">Accepted</SelectItem>
               <SelectItem value="Expired">Expired</SelectItem>
@@ -197,11 +186,11 @@ export function InvitationManagementScreen({ onBack }: InvitationManagementScree
             </SelectContent>
           </Select>
           <Select value={entityFilter} onValueChange={setEntityFilter}>
-            <SelectTrigger className="w-[110px] h-8 text-xs">
+            <SelectTrigger className="w-[140px] h-10 text-sm">
               <SelectValue placeholder="Entity" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
               <SelectItem value="Sponsor">Sponsor</SelectItem>
               <SelectItem value="CRO">CRO</SelectItem>
               <SelectItem value="SMO">SMO</SelectItem>
@@ -212,9 +201,9 @@ export function InvitationManagementScreen({ onBack }: InvitationManagementScree
       </div>
 
       {/* Invitation List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {filteredInvitations.map((inv) => (
-          <Card key={inv.id} className="border-0 shadow-sm">
+          <Card key={inv.id} className="border border-gray-200 shadow-sm">
             <CardContent className="p-3">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -231,13 +220,18 @@ export function InvitationManagementScreen({ onBack }: InvitationManagementScree
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {(inv.status === "Sent" || inv.status === "Expired") && (
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => toast.success(`Invitation resent to ${inv.email}`)}
+                      >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Resend Invitation
                       </DropdownMenuItem>
                     )}
                     {inv.status === "Sent" && (
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => toast.success(`Invitation to ${inv.email} cancelled`)}
+                      >
                         <XCircle className="h-4 w-4 mr-2" />
                         Cancel Invitation
                       </DropdownMenuItem>

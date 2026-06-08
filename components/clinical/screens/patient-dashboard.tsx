@@ -132,10 +132,14 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
         {/* Medication Section */}
         <div className="px-4 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => onNavigate("medication-reminder")}
+              className="flex items-center gap-2"
+            >
               <Pill className="w-5 h-5 text-[#0D1B3E]" />
               <h3 className="font-semibold text-[#0F172A] font-[family-name:var(--font-heading)]">{t("medication")}</h3>
-            </div>
+              <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+            </button>
             {!allDone && (
               <span className="text-sm text-[#64748B]">{takenCount}/{totalCount} {t("taken")}</span>
             )}
@@ -288,7 +292,7 @@ export function PatientDashboard({ onNavigate }: PatientDashboardProps) {
           setActiveTab(tab)
           if (tab === "my-trial") onNavigate("my-trial")
           if (tab === "chat")     onNavigate("chat")
-          if (tab === "notifs")   onNavigate("notifications")
+          if (tab === "calendar") onNavigate("patient-calendar")
           if (tab === "me")       onNavigate("profile-settings")
         }} 
       />

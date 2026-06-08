@@ -52,19 +52,17 @@ export function EmergencyAccessScreen({ onBack }: EmergencyAccessScreenProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
-        </button>
-        <h1 className="text-lg font-semibold text-[#0D1B3E] font-[family-name:var(--font-heading)]">
-          Emergency Access Request
-        </h1>
+    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
+      {/* Header row */}
+      <div>
+        <h1 className="text-xl font-bold text-[#1A3872]">Break-the-Glass access</h1>
+        <p className="text-sm text-gray-500">
+          Temporary, time-limited access to protected patient PHI. Every access is permanently logged.
+        </p>
       </div>
 
       {/* Warning Banner */}
-      <div className="mx-4 mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+      <div className="p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
         <AlertTriangle className="w-6 h-6 text-red-500 mt-0.5 flex-shrink-0" />
         <div>
           <p className="text-sm font-semibold text-red-700">Restricted Access Area</p>
@@ -74,7 +72,7 @@ export function EmergencyAccessScreen({ onBack }: EmergencyAccessScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="space-y-4">
         {/* Step 1: Request Form */}
         {step === 1 && (
           <div className="bg-white rounded-xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">

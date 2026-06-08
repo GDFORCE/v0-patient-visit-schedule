@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, Bell } from "lucide-react"
+import { ChevronLeft, Bell, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AppBarProps {
@@ -11,6 +11,7 @@ interface AppBarProps {
   rightContent?: React.ReactNode
   notificationCount?: number
   onNotificationClick?: () => void
+  onCalendarClick?: () => void
   avatar?: string
   onAvatarClick?: () => void
   className?: string
@@ -24,6 +25,7 @@ export function AppBar({
   rightContent,
   notificationCount,
   onNotificationClick,
+  onCalendarClick,
   avatar,
   onAvatarClick,
   className,
@@ -60,6 +62,16 @@ export function AppBar({
 
       <div className="flex items-center gap-2 shrink-0">
         {rightContent}
+        {onCalendarClick && (
+          <button
+            type="button"
+            onClick={onCalendarClick}
+            aria-label="Calendar"
+            className="relative flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-primary-foreground/10"
+          >
+            <Calendar className="h-5 w-5" />
+          </button>
+        )}
         {notificationCount !== undefined && (
           <button
             type="button"
