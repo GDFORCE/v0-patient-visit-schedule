@@ -203,6 +203,20 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         ))}
       </div>
 
+      {/* ── Quick access (moved to top) ─────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {quickAccess.map(({ dest, label, icon: Icon }) => (
+          <button
+            key={dest}
+            onClick={() => go(dest, "quick-access")}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-[#2563EB] transition-colors py-4"
+          >
+            <Icon className="h-5 w-5 text-[#2563EB]" />
+            <span className="text-xs font-medium text-gray-700">{label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* ── Two-column body ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: distribution + activity */}
@@ -267,19 +281,6 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </CardContent>
           </Card>
 
-          {/* Quick access */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {quickAccess.map(({ dest, label, icon: Icon }) => (
-              <button
-                key={dest}
-                onClick={() => go(dest, "quick-access")}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-[#2563EB] transition-colors py-4"
-              >
-                <Icon className="h-5 w-5 text-[#2563EB]" />
-                <span className="text-xs font-medium text-gray-700">{label}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Right: §3 Pending admin actions */}

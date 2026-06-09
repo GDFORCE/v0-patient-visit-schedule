@@ -7,9 +7,6 @@ import {
   Users,
   FlaskConical,
   Bell,
-  ScrollText,
-  History,
-  KeyRound,
   Inbox,
   UserCog,
   Share2,
@@ -58,9 +55,6 @@ const primaryNav: NavItem[] = [
     match: ["admin-master-data", "admin-support", "admin-system-alerts", "admin-notifications"],
   },
   { id: "admin-trials", label: "Trial Management", icon: FlaskConical, code: "ADM-06" },
-  { id: "admin-terms", label: "Terms & Conditions", icon: ScrollText, code: "ADM-04" },
-  { id: "admin-audit", label: "Audit Trail", icon: History, code: "ADM-08" },
-  { id: "admin-emergency", label: "Break-the-Glass", icon: KeyRound, code: "ADM-09" },
   { id: "admin-delegation", label: "Delegation", icon: Share2, code: "ADM-13" },
   { id: "admin-messages", label: "Messages", icon: MessageSquare, code: "ADM-14" },
   { id: "admin-profile", label: "My Profile", icon: UserCog, code: "ADM-12" },
@@ -266,6 +260,7 @@ export function AdminPortalShell({ currentScreen, title, onNavigate, children }:
                     {[
                       { label: "My Profile", dest: "admin-profile" },
                       { label: "Session & security", dest: "admin-profile" },
+                      { label: "Terms & Conditions", dest: "admin-terms" },
                       { label: "Delegation", dest: "admin-delegation" },
                     ].map((s) => (
                       <button
