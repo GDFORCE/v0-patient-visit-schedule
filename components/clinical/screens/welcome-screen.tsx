@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Building2 } from "lucide-react"
+import { MtbLogoMark } from "@/components/clinical/mtb-logo"
 
 interface WelcomeScreenProps {
   onSignUp: () => void
@@ -21,7 +21,7 @@ export function WelcomeScreen({ onSignUp, onSignIn, onForgotPassword }: WelcomeS
         />
         {/* Logo */}
         <div className="relative w-24 h-24 bg-card rounded-2xl flex items-center justify-center mb-6 shadow-lg ring-1 ring-white/20">
-          <Building2 className="w-12 h-12 text-primary" />
+          <MtbLogoMark variant="plain" className="w-16 h-16 text-primary" />
         </div>
 
         {/* Title */}

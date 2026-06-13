@@ -163,7 +163,9 @@ export default function PatientVisitScheduleApp() {
   // Which view the PI/CRC calendar should open in (deep-linked from the dashboard).
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month")
   // Which PI-dashboard tab to open on when the nav routes into it.
-  const [piTab, setPiTab] = useState<"dashboard" | "my-trials">("dashboard")
+  const [piTab, setPiTab] = useState<"dashboard" | "my-trials" | "patients">("dashboard")
+  // Which research-team (CRC) dashboard tab to open on when the nav routes into it.
+  const [crcTab, setCrcTab] = useState<"dashboard" | "patients">("dashboard")
   // Which entity owns the PI dashboard's profile ("smo" shows the SMO hospitals view).
   const [piProfileEntity, setPiProfileEntity] = useState<"site" | "smo">("site")
   // Hide the bottom nav while a chat conversation (message thread) is open.
@@ -183,6 +185,14 @@ export default function PatientVisitScheduleApp() {
     }
     setHistory([...history, target as Screen])
     setCurrentScreen(target as Screen)
+  }
+
+  // After adding/inviting a patient, return to the Patients view of whichever
+  // dashboard launched the flow — not the standalone legacy patient-list screen.
+  const returnToPatients = () => {
+    if (history.includes("pi-dashboard")) { setPiTab("patients"); navigate("pi-dashboard") }
+    else if (history.includes("research-team-dashboard")) { setCrcTab("patients"); navigate("research-team-dashboard") }
+    else navigate("patient-list")
   }
 
   const goBack = () => {
@@ -277,7 +287,7 @@ export default function PatientVisitScheduleApp() {
       case "pi-dashboard":
         return <PIDashboard initialTab={piTab} initialTrialId={openTrialSummary ? "Protocol-001" : undefined} profileEntity={piProfileEntity} onNavigate={(screen) => navigate(screen as Screen)} />
       case "research-team-dashboard":
-        return <ResearchTeamDashboard onNavigate={(screen) => navigate(screen as Screen)} />
+        return <ResearchTeamDashboard initialTab={crcTab} onNavigate={(screen) => navigate(screen as Screen)} />
       case "patient-dashboard":
         return <PatientDashboard onNavigate={(screen) => navigate(screen as Screen)} />
       case "add-trial":
@@ -308,7 +318,7 @@ export default function PatientVisitScheduleApp() {
       case "add-patient":
         return (
           <AddPatientScreen
-            onAdd={() => navigate("patient-list")}
+            onAdd={returnToPatients}
             onBack={goBack}
           />
         )
@@ -510,8 +520,8 @@ export default function PatientVisitScheduleApp() {
       else if (tab === "calendar") navigate("pi-calendar")
       else if (tab === "me") navigate("profile-settings")
     } else if (navRole === "crc") {
-      if (tab === "dashboard") navigate("research-team-dashboard")
-      else if (tab === "patients") navigate("patient-list")
+      if (tab === "dashboard") { setCrcTab("dashboard"); navigate("research-team-dashboard") }
+      else if (tab === "patients") { setCrcTab("patients"); navigate("research-team-dashboard") }
       else if (tab === "calendar") navigate("crc-calendar")
       else if (tab === "me") navigate("profile-settings")
     }

@@ -51,8 +51,7 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 // ── Sponsor / CRO form ──────────────────────────────────
-function SponsorForm({ entityType }: { entityType?: string | null }) {
-  const entityLabel = entityType === "cro" ? "CRO" : "Sponsor"
+function SponsorForm() {
   return (
     <div className="space-y-4">
       <Field label="Full Name" required><Input defaultValue="John Doe" /></Field>
@@ -61,12 +60,6 @@ function SponsorForm({ entityType }: { entityType?: string | null }) {
         <Input type="email" defaultValue="john.doe@pharmaco.com" />
       </Field>
       <Field label="Phone Number" required><PhoneInput defaultValue="98765 43210" /></Field>
-
-      {/* Entity Type — auto-populated */}
-      <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Entity Type</span>
-        <span className="text-sm font-semibold text-primary-deep">{entityLabel}</span>
-      </div>
 
       <SectionHeader title="Organization" />
       <Field label="Organization Name" required><Input defaultValue="PharmaCo Ltd" /></Field>
@@ -81,6 +74,7 @@ function SponsorForm({ entityType }: { entityType?: string | null }) {
 // ── Site / Hospital form ──────────────────────────────────
 function SiteForm() {
   const [role, setRole] = useState<"PI" | "Research Team">("PI")
+  const [hospitalType, setHospitalType] = useState<"Private" | "Government">("Private")
 
   return (
     <div className="space-y-4">
@@ -93,18 +87,27 @@ function SiteForm() {
       {/* 4. Phone No. */}
       <Field label="Phone Number" required><PhoneInput defaultValue="98100 12345" /></Field>
 
-      {/* 5. Entity Type — not bold */}
-      <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Entity Type</span>
-        <span className="text-sm text-primary-deep">Site / Hospital</span>
-      </div>
-
       {/* 6. Org. Name */}
       <Field label="Organization Name" required><Input defaultValue="Apollo Hospitals Mumbai" /></Field>
       {/* 7. Org. Address */}
       <Field label="Organization Address" required>
         <textarea rows={2} placeholder="Building / Street, City, State, PIN"
           className="w-full px-4 py-3 rounded-xl border border-border text-sm outline-none focus:border-primary focus:ring-2 focus:ring-info/15 resize-none" />
+      </Field>
+
+      {/* Hospital Type: Private / Government */}
+      <Field label="Hospital Type" required>
+        <div className="flex rounded-xl border border-border overflow-hidden">
+          {(["Private", "Government"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setHospitalType(t)}
+              className={cn("flex-1 py-2.5 text-sm font-medium", hospitalType === t ? "bg-primary text-white" : "bg-card text-muted-foreground")}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </Field>
 
       {/* 8. Role: PI / Research Team */}
@@ -153,12 +156,6 @@ function SMOForm() {
       <Field label="Email ID" required><Input type="email" defaultValue="r.kumar@smo.com" /></Field>
       {/* 4. Phone No. */}
       <Field label="Phone Number" required><PhoneInput defaultValue="98100 12345" /></Field>
-
-      {/* 5. Entity Type — not bold */}
-      <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Entity Type</span>
-        <span className="text-sm text-primary-deep">SMO</span>
-      </div>
 
       {/* 6. SMO Name */}
       <Field label="SMO Name" required><Input defaultValue="MedSites SMO Pvt Ltd" /></Field>
@@ -307,7 +304,7 @@ export function RegistrationScreen({ onSubmit, onBack, entityType }: Registratio
       case "sponsor":
       case "cro":
       default:
-        return <SponsorForm entityType={entityType} />
+        return <SponsorForm />
     }
   }
 

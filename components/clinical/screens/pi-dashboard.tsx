@@ -15,9 +15,8 @@ import { SiteUserProfile } from "@/components/clinical/screens/site-user-profile
 interface PIDashboardProps {
   onNavigate: (screen: string) => void
   initialTab?: PiTab
-  /** When set, the dashboard opens directly on this trial's summary (e.g. after saving a new trial). */
   initialTrialId?: string
-  /** Which entity the logged-in user belongs to. "smo" shows the SMO profile (hospitals + Add Hospital). */
+
   profileEntity?: "site" | "smo"
 }
 
@@ -932,7 +931,8 @@ export function PIDashboard({ onNavigate, initialTab = "dashboard", initialTrial
                       completed: { Icon: CheckCircle, color: "text-teal-500" },
                       missed:    { Icon: AlertTriangle, color: "text-destructive" },
                       upcoming:  { Icon: Clock, color: "text-info" },
-                      planned:   { Icon: Calendar, color: "text-muted-foreground/70" },
+                      planned:   { Icon: Calendar
+                        , color: "text-muted-foreground/70" },
                     }[v.state]
                     const Icon = sc.Icon
                     const windowLabel = (() => {

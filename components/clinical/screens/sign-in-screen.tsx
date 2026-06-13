@@ -1,6 +1,7 @@
 "use client"
 
-import { Building2, Eye, EyeOff, Lock, ShieldQuestion, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Lock, ShieldQuestion, AlertCircle } from "lucide-react"
+import { MtbLogoMark } from "@/components/clinical/mtb-logo"
 import { useState } from "react"
 
 interface SignInScreenProps {
@@ -129,9 +130,7 @@ export function SignInScreen({ onSignIn, onSignUp, onForgotPassword }: SignInScr
       <div className="flex-1 px-6 py-8">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center">
-            <Building2 className="w-10 h-10 text-white" />
-          </div>
+          <MtbLogoMark className="w-20 h-20 rounded-2xl shadow-lg shadow-primary/20" />
         </div>
 
         {/* Title */}
