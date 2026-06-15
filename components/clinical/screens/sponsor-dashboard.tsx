@@ -7,13 +7,14 @@ import {
   BarChart2, ShieldCheck, Users, Download, Phone, Mail,
   X, Check, AlertTriangle, Info, SlidersHorizontal,
   FileText, UserPen, Lock, LogOut, Camera,
-  UserCheck, Eye, EyeOff, HelpCircle, Building2, Clock, Ticket
+  UserCheck, Eye, EyeOff, HelpCircle, Building2, Clock, Ticket, FileClock
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { TrialActionsMenu } from "@/components/clinical/trial-actions-menu"
 import { StatusBadge as SharedStatusBadge } from "@/components/clinical/status-badge"
 import { ENTITY_TYPES, ticketStatusStyle, type SupportTicket } from "@/components/clinical/screens/site-user-profile"
+import { AuditTrailScreen } from "@/components/clinical/screens/audit-trail-screen"
 
 interface SponsorDashboardProps {
   onNavigate: (screen: string) => void
@@ -1191,7 +1192,7 @@ export function SponsorDashboard({ onNavigate, initialTrialId, initialTab }: Spo
             </div>
             {/* Menu */}
             {[
-              { section: "ACCOUNT", items: [{ icon: UserPen, label: "Edit Profile", onClick: () => setMeSection("edit-profile") }, { icon: Building2, label: "Entity Change", onClick: () => setMeSection("entity-change") }, { icon: Lock, label: "Change Password", onClick: () => setMeSection("change-password") }, { icon: Bell, label: "Notification Preferences", onClick: () => setMeSection("notifications") }] },
+              { section: "ACCOUNT", items: [{ icon: UserPen, label: "Edit Profile", onClick: () => setMeSection("edit-profile") }, { icon: Building2, label: "Entity Change", onClick: () => setMeSection("entity-change") }, { icon: Lock, label: "Change Password", onClick: () => setMeSection("change-password") }, { icon: Bell, label: "Notification Preferences", onClick: () => setMeSection("notifications") }, { icon: FileClock, label: "Audit Trail", onClick: () => setMeSection("audit-trail") }] },
               { section: "TRIAL MANAGEMENT", items: [{ icon: FlaskConical, label: "My Trials", onClick: () => setActiveTab("trials") }, { icon: MapPin, label: "My Sites", onClick: () => setActiveTab("sites") }, { icon: Users, label: "Team Members", onClick: () => setMeSection("team-members") }] },
               { section: "REPORTS", items: [{ icon: BarChart2, label: "Reports", onClick: () => setMeSection("reports") }, { icon: FileText, label: "T&C", onClick: () => setMeSection("tnc") }, { icon: HelpCircle, label: "Help & Support", onClick: () => setMeSection("help") }] },
             ].map(group => (
@@ -1854,6 +1855,11 @@ export function SponsorDashboard({ onNavigate, initialTrialId, initialTab }: Spo
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── Audit Trail (full-screen) ── */}
+      {meSection === "audit-trail" && (
+        <AuditTrailScreen role="sponsor" headerVariant="dark" onBack={() => setMeSection(null)} />
       )}
 
       {/* ── Reports (full-screen) ── */}

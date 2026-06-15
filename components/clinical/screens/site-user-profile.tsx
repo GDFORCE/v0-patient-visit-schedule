@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Camera, ShieldCheck, UserPen, Lock, Bell, ChevronRight, ChevronDown, Eye, EyeOff, Check, X, LogOut, Mail, Phone, Plus, Trash2, Building2, FlaskConical, FileText, HelpCircle, BarChart2, Users, UserCheck, AlertTriangle, MessageCircle, Clock, Ticket } from "lucide-react"
+import { Camera, ShieldCheck, UserPen, Lock, Bell, ChevronRight, ChevronDown, Eye, EyeOff, Check, X, LogOut, Mail, Phone, Plus, Trash2, Building2, FlaskConical, FileText, HelpCircle, BarChart2, Users, UserCheck, AlertTriangle, MessageCircle, Clock, Ticket, FileClock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { AuditTrailScreen } from "@/components/clinical/screens/audit-trail-screen"
 
 export type SiteRole = "PI" | "Research Team"
 
@@ -86,6 +87,7 @@ type Section =
   | "help-contact"
   | "help-tickets"
   | "reports"
+  | "audit-trail"
 
 const DEFAULT_TRIALS: SiteTrial[] = [
   { id: "Protocol-001", name: "Diabetes Phase II" },
@@ -256,6 +258,7 @@ export function SiteUserProfile({ user, onSignOut, trials = DEFAULT_TRIALS, onOp
           { icon: Building2, label: "Entity Change", onClick: () => setSection("entity-change") },
           { icon: Lock, label: "Change Password", onClick: () => setSection("change-password") },
           { icon: Bell, label: "Notification Preferences", onClick: () => setSection("notifications") },
+          { icon: FileClock, label: "Audit Trail", onClick: () => setSection("audit-trail") },
         ].map(item => {
           const Icon = item.icon
           return (
@@ -1088,6 +1091,9 @@ export function SiteUserProfile({ user, onSignOut, trials = DEFAULT_TRIALS, onOp
       {section === "help-faq" && helpFaq}
       {section === "help-contact" && helpContact}
       {section === "help-tickets" && helpTickets}
+      {section === "audit-trail" && (
+        <AuditTrailScreen role={user.role === "Research Team" ? "crc" : "pi"} headerVariant="dark" onBack={() => setSection(null)} />
+      )}
     </>
   )
 }

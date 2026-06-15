@@ -335,6 +335,12 @@ export default function PatientVisitScheduleApp() {
       case "notifications":
         return (
           <NotificationScreen
+            role={
+              selectedEntity === "patient" ? "patient" :
+              (selectedEntity === "sponsor" || selectedEntity === "cro" || selectedEntity === "smo") ? "sponsor" :
+              history.includes("research-team-dashboard") || history.includes("crc-calendar") ? "crc" :
+              "pi"
+            }
             onNavigate={(screen) => navigate(screen as Screen)}
             onBack={goBack}
           />

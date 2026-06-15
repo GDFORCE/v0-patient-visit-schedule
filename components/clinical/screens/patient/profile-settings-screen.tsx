@@ -1,18 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, ChevronDown, Camera, User, Lock, Globe, Bell, FileText, Shield, ShieldCheck, HelpCircle, LogOut, AlertTriangle, Eye, EyeOff, Check, X, MessageCircle, Mail, Phone, Clock, Ticket } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronDown, Camera, User, Lock, Globe, Bell, FileText, Shield, ShieldCheck, HelpCircle, LogOut, AlertTriangle, Eye, EyeOff, Check, X, MessageCircle, Mail, Phone, Clock, Ticket, FileClock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/i18n"
 import { toast } from "sonner"
 import { ticketStatusStyle, type SupportTicket } from "@/components/clinical/screens/site-user-profile"
+import { AuditTrailScreen } from "@/components/clinical/screens/audit-trail-screen"
 
 interface ProfileSettingsScreenProps {
   onBack?: () => void
   onLogout?: () => void
 }
 
-type Section = "main" | "edit-profile" | "change-password" | "notification-prefs" | "terms" | "privacy" | "help" | "faq" | "contact-support" | "tickets"
+type Section = "main" | "edit-profile" | "change-password" | "notification-prefs" | "terms" | "privacy" | "help" | "faq" | "contact-support" | "tickets" | "audit-trail"
 
 export function ProfileSettingsScreen({ onBack, onLogout }: ProfileSettingsScreenProps) {
   const { t, setLang } = useLanguage()
@@ -498,6 +499,10 @@ export function ProfileSettingsScreen({ onBack, onLogout }: ProfileSettingsScree
     )
   }
 
+  if (section === "audit-trail") {
+    return <AuditTrailScreen role="patient" headerVariant="light" onBack={() => setSection("main")} />
+  }
+
   if (section === "help") {
     return (
       <div className="h-full flex flex-col bg-surface">
@@ -544,6 +549,7 @@ export function ProfileSettingsScreen({ onBack, onLogout }: ProfileSettingsScree
     { icon: Lock,        label: t("changePassword"),           action: () => setSection("change-password") },
     { icon: Globe,       label: t("preferredLanguage"),        action: () => setShowLanguagePicker(true) },
     { icon: Bell,        label: t("notificationPreferences"),  action: () => setSection("notification-prefs") },
+    { icon: FileClock,   label: "Audit Trail",                 action: () => setSection("audit-trail") },
     { icon: FileText,    label: t("termsConditions"),          action: () => setSection("terms") },
     { icon: Shield,      label: t("privacyPolicy"),            action: () => setSection("privacy") },
     { icon: HelpCircle,  label: t("helpSupport"),              action: () => setSection("help") },
